@@ -19,7 +19,7 @@
             <!-- Sidebar Header -->
             <div class="px-6 py-5 border-b border-gray-100">
                 <h1 class="text-lg font-bold text-blue-800">Lapor Infrastruktur</h1>
-                <p class="text-xs text-gray-400 mt-0.5">Dashboard Admin</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ session('user')['name'] ?? 'Admin' }}</p>
             </div>
 
             <!-- Sidebar Navigation -->
@@ -58,10 +58,13 @@
 
         <!-- Sidebar Footer -->
         <div class="p-3 border-t border-gray-100 mt-auto">
-            <a href="/" class="flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
-                Keluar
-            </a>
+            <form action="/logout" method="POST">
+                @csrf
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+                    Keluar
+                </button>
+            </form>
         </div>
     </aside>
 

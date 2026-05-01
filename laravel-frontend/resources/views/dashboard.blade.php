@@ -95,53 +95,35 @@
         </div>
         
         <div class="divide-y divide-gray-100">
-            <!-- Report Item 1 -->
-            <a href="{{ url('/laporan/detail') }}" class="block px-4 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-                <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">Jalan Berlubang di Jl. Sudirman</h3>
-                    <p class="text-xs text-gray-500">Jl. Sudirman No. 42</p>
-                    <p class="text-xs text-gray-400 mt-0.5">Kerusakan Jalan • 2026-04-25</p>
+            @forelse($reports->take(5) as $report)
+            <a href="{{ url('/laporan/' . $report['id']) }}" class="block px-4 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        <img src="{{ $report['photo_url'] ?? 'https://via.placeholder.com/100?text=No+Image' }}" alt="Thumb" class="w-full h-full object-cover">
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">{{ $report['description'] }}</h3>
+                        <p class="text-xs text-gray-500">ID: #{{ $report['id'] }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ \Carbon\Carbon::parse($report['created_at'])->format('Y-m-d') }}</p>
+                    </div>
                 </div>
-                <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                    Diajukan
+                @php
+                    $statusColors = [
+                        'pending' => 'bg-orange-100 text-orange-700 border-orange-200',
+                        'verified' => 'bg-blue-100 text-blue-700 border-blue-200',
+                        'in_progress' => 'bg-sky-100 text-sky-700 border-sky-200',
+                        'resolved' => 'bg-green-100 text-green-700 border-green-200',
+                        'spam' => 'bg-red-100 text-red-700 border-red-200',
+                    ];
+                    $color = $statusColors[$report['status']] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+                @endphp
+                <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $color }} border">
+                    {{ ucfirst(str_replace('_', ' ', $report['status'])) }}
                 </span>
             </a>
-
-            <!-- Report Item 2 -->
-            <a href="{{ url('/laporan/detail?status=diproses') }}" class="block px-4 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-                <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">Lampu Jalan Mati</h3>
-                    <p class="text-xs text-gray-500">Jl. Merdeka No. 15</p>
-                    <p class="text-xs text-gray-400 mt-0.5">Penerangan Jalan • 2026-04-24</p>
-                </div>
-                <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                    Diproses
-                </span>
-            </a>
-
-            <!-- Report Item 3 -->
-            <a href="{{ url('/laporan/detail?status=selesai') }}" class="block px-4 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-                <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">Trotoar Rusak</h3>
-                    <p class="text-xs text-gray-500">Jl. Gatot Subroto</p>
-                    <p class="text-xs text-gray-400 mt-0.5">Kerusakan Jalan • 2026-04-23</p>
-                </div>
-                <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                    Selesai
-                </span>
-            </a>
-
-            <!-- Report Item 4 -->
-            <a href="{{ url('/laporan/detail?status=ditolak') }}" class="block px-4 sm:px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-                <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">Saluran Air Tersumbat</h3>
-                    <p class="text-xs text-gray-500">Jl. Ahmad Yani</p>
-                    <p class="text-xs text-gray-400 mt-0.5">Drainase • 2026-04-23</p>
-                </div>
-                <span class="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-                    Ditolak
-                </span>
-            </a>
+            @empty
+            <div class="p-8 text-center text-gray-500 text-sm">Belum ada laporan terbaru.</div>
+            @endforelse
         </div>
     </div>
 

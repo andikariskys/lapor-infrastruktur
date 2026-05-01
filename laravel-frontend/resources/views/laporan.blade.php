@@ -41,354 +41,59 @@
 
     <!-- Category Lists -->
     <div class="space-y-6 w-full">
-
-        <!-- Cluster 1: Road Damage -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
             <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <div>
-                    <h2 class="text-base font-bold text-blue-700">Road Damage</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">3 laporan dalam kategori ini</p>
+                    <h2 class="text-base font-bold text-blue-700">Semua Laporan</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ count($reports) }} laporan ditemukan</p>
                 </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 1
-                </span>
             </div>
             <div class="p-6 space-y-4">
-                <!-- Report 1 -->
-                <a href="{{ url('/laporan/detail') }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Jalan Berlubang di Jl. Sudirman</h3>
+                @forelse($reports as $report)
+                <a href="{{ url('/laporan/' . $report['id']) }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 flex-shrink-0">
+                            <img src="{{ $report['photo_url'] ?? 'https://via.placeholder.com/200?text=No+Image' }}" alt="Laporan" class="w-full h-full object-cover">
                         </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-gray-900">{{ $report['description'] }}</h3>
+                            </div>
                         <div class="flex items-center text-xs text-gray-500 gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Sudirman No. 42, Jakarta
+                            Lat: {{ $report['latitude'] }}, Long: {{ $report['longitude'] }}
                         </div>
                         <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
                             <div class="flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-25 • 14:30
+                                {{ \Carbon\Carbon::parse($report['created_at'])->format('Y-m-d H:i') }}
                             </div>
-                            <span>•</span>
-                            <span>Pelapor: Ahmad Fauzi</span>
+                            </div>
                         </div>
                     </div>
                     <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                            Diajukan
+                        @php
+                            $statusColors = [
+                                'pending' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                'verified' => 'bg-blue-100 text-blue-700 border-blue-200',
+                                'in_progress' => 'bg-sky-100 text-sky-700 border-sky-200',
+                                'resolved' => 'bg-green-100 text-green-700 border-green-200',
+                                'spam' => 'bg-red-100 text-red-700 border-red-200',
+                            ];
+                            $color = $statusColors[$report['status']] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+                        @endphp
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $color }} border">
+                            {{ ucfirst(str_replace('_', ' ', $report['status'])) }}
                         </span>
                     </div>
                 </a>
-
-                <!-- Report 2 -->
-                <a href="{{ url('/laporan/detail') }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-bold text-gray-900">Aspal Jalan Retak</h3>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Sudirman No. 85, Jakarta <span class="text-gray-400">~0.12 km dari pusat</span>
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-25 • 10:10
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Joko Widodo</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                            Diajukan
-                        </span>
-                    </div>
-                </a>
-
-                <!-- Report 3 -->
-                <a href="{{ url('/laporan/detail?status=selesai') }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-bold text-gray-900">Trotoar Rusak</h3>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Gatot Subroto, Jakarta <span class="text-gray-400">~0.31 km dari pusat</span>
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-23 • 16:45
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Budi Santoso</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                            Selesai
-                        </span>
-                    </div>
-                </a>
+                @empty
+                <div class="text-center py-12">
+                    <p class="text-gray-500">Belum ada laporan yang masuk.</p>
+                </div>
+                @endforelse
             </div>
         </div>
-
-        <!-- Cluster 2: Street Lighting -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Street Lighting</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini • <span class="text-red-500 font-semibold">Ada laporan darurat</span></p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 2
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <!-- Report 1 -->
-                <a href="{{ url('/laporan/detail?status=diproses') }}" class="block border border-red-100 rounded-xl p-4 sm:p-5 hover:border-red-200 transition-colors bg-red-50/20 flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center flex-wrap gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Lampu Jalan Mati</h3>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-600">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                DARURAT
-                            </span>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Merdeka No. 15, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-24 • 09:15
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Siti Nurbaya</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                            Diproses
-                        </span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Cluster 3: Drainage -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Drainage</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini</p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 3
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <!-- Report 1 -->
-                <a href="{{ url('/laporan/detail?status=ditolak') }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Saluran Air Tersumbat</h3>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Ahmad Yani, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-23 • 10:20
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Dewi Lestari</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-                            Ditolak
-                        </span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Cluster 4: Traffic Signs -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Traffic Signs</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini</p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 4
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <a href="{{ url('/laporan/detail') }}" class="block border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Rambu Lalu Lintas Hilang</h3>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Thamrin, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-22 • 13:00
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Eko Prasetyo</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                            Diajukan
-                        </span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Cluster 5: Bridge & Overpass -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Bridge & Overpass</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini • <span class="text-red-500 font-semibold">Ada laporan darurat</span></p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 5
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <div class="border border-red-100 rounded-xl p-4 sm:p-5 hover:border-red-200 transition-colors bg-red-50/20 flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center flex-wrap gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Jembatan Penyeberangan Rusak</h3>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-600">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                DARURAT
-                            </span>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Rasuna Said, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-22 • 08:30
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Fitri Handayani</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
-                            Diproses
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cluster 6: Road Marking -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Road Marking</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini</p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 6
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <div class="border border-gray-100 rounded-xl p-4 sm:p-5 hover:border-gray-200 transition-colors bg-white flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Marka Jalan Pudar</h3>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Kuningan, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-21 • 15:10
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Hendra Wijaya</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                            Selesai
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cluster 7: Others -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-blue-700">Others</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">1 laporan dalam kategori ini • <span class="text-red-500 font-semibold">Ada laporan darurat</span></p>
-                </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                    Cluster 7
-                </span>
-            </div>
-            <div class="p-6 space-y-4">
-                <div class="border border-red-100 rounded-xl p-4 sm:p-5 hover:border-red-200 transition-colors bg-red-50/20 flex flex-col sm:flex-row gap-4 sm:items-start justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <div class="flex items-center flex-wrap gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Pusat Cluster</span>
-                            <h3 class="text-sm font-bold text-gray-900">Pohon Tumbang Menghalangi Jalan</h3>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-[10px] font-bold text-red-600">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                DARURAT
-                            </span>
-                        </div>
-                        <div class="flex items-center text-xs text-gray-500 gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-                            Jl. Senopati, Jakarta
-                        </div>
-                        <div class="flex flex-wrap items-center text-xs text-gray-400 gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>
-                                2026-04-21 • 07:45
-                            </div>
-                            <span>•</span>
-                            <span>Pelapor: Indah Permata</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                            Selesai
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 
 </div>
