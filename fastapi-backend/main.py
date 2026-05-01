@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, select
 from database import engine, get_db
 import auth_utils, models
+=======
+from fastapi import FastAPI
+import bcrypt
+>>>>>>> origin/main
 
 # Create tables in database (if they don't exist)
 SQLModel.metadata.create_all(bind=engine)
@@ -25,6 +30,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
+<<<<<<< HEAD
     return {"message": "API Autentikasi JWT + Database siap!"}
 
 @app.post("/api/auth/register")
@@ -61,3 +67,18 @@ def get_user_info(current_user: models.User = Depends(auth_utils.get_current_use
     menggunakan HTTP Basic Auth.
     """
     return current_user
+=======
+    return {"message": "Selamat datang di Lapor Infrastruktur API!"}
+
+# Contoh endpoint untuk hashing password menggunakan bcrypt
+@app.get("/hash-password/")
+async def hash_password():
+    # Anggap saja kita memiliki password yang ingin di-hash
+    password = "password@123"
+    # Hash password menggunakan bcrypt
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    hashed_password = hashed_password.decode('utf-8')  # Hasil hash ini simpan ke database
+    # Verifikasi password (contoh)
+    is_valid = bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    return {"password": password, "hashed_password": hashed_password, "is_valid": is_valid}
+>>>>>>> origin/main
