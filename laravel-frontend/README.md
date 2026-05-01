@@ -91,4 +91,11 @@ Aplikasi ini memerlukan dua server yang berjalan secara bersamaan:
     ```
     *(Penting untuk memproses CSS Tailwind dan Javascript secara real-time)*
 
+3.  **Server Asset Production (Vite):**
+    Buka terminal kedua dan jalankan:
+    ```bash
+    npm run build
+    ```
+    *(Penting untuk membuat build file agar dapat diakses di production)*
+
 Aplikasi sekarang dapat diakses melalui browser di [http://localhost:8000](http://localhost:8000).
