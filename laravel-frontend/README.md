@@ -40,40 +40,55 @@ Ikuti langkah-langkah berikut untuk menyiapkan proyek secara lokal:
     composer install
     ```
 
-3.  **Konfigurasi Environment:**
+3.  **Instal dependensi Frontend (NPM):**
+    Karena Laravel 12 menggunakan **Vite**, Anda perlu menginstal dependensi Node.js:
+    ```bash
+    npm install
+    ```
+
+4.  **Konfigurasi Environment:**
     Salin file `.env.example` menjadi `.env`:
     ```bash
     cp .env.example .env
     ```
 
-4.  **Konfigurasi Database di `.env`:**
-    Buka file `.env` dan sesuaikan bagian berikut dengan kredensial MySQL Anda:
+5.  **Konfigurasi Database & API di `.env`:**
+    Buka file `.env` dan sesuaikan bagian berikut:
     ```env
     DB_CONNECTION=mysql
     DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_DATABASE=lapor_infrastruktur
-    DB_USERNAME=root
-    DB_PASSWORD=
+    DB_DATABASE=laporinfra
+    
+    # Konfigurasi API FastAPI
+    API_URL=http://localhost:8000/api
     ```
-    *Pastikan Anda telah membuat database bernama `lapor_infrastruktur` di MySQL Anda.*
 
-5.  **Generate Application Key:**
+6.  **Generate Application Key:**
     ```bash
     php artisan key:generate
     ```
 
-6.  **Jalankan Migrasi Database:**
+7.  **Jalankan Migrasi Database:**
     ```bash
     php artisan migrate
     ```
 
 ## Menjalankan Aplikasi
 
-Jalankan server pengembangan Laravel dengan perintah:
+Aplikasi ini memerlukan dua server yang berjalan secara bersamaan:
 
-```bash
-php artisan serve
-```
+1.  **Server Backend (PHP):**
+    Buka terminal pertama dan jalankan:
+    ```bash
+    php artisan serve
+    ```
+    *(Aplikasi akan berjalan di http://localhost:8000)*
+
+2.  **Server Asset (Vite):**
+    Buka terminal kedua dan jalankan:
+    ```bash
+    npm run dev
+    ```
+    *(Penting untuk memproses CSS Tailwind dan Javascript secara real-time)*
 
 Aplikasi sekarang dapat diakses melalui browser di [http://localhost:8000](http://localhost:8000).
