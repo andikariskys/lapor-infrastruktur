@@ -42,7 +42,7 @@ CREATE TABLE categories (
 CREATE TABLE reports (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    category_id INT NOT NULL,
+    category_id INT NULL,
     description TEXT NOT NULL,
     photo_url VARCHAR(255) NOT NULL,
     latitude DECIMAL(10, 8) NOT NULL,

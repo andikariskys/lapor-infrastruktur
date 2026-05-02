@@ -75,27 +75,34 @@ Ikuti langkah-langkah berikut untuk menyiapkan proyek secara lokal:
 
 ## Menjalankan Aplikasi
 
-Aplikasi ini memerlukan dua server yang berjalan secara bersamaan:
+Aplikasi ini menggunakan arsitektur **Decoupled**, sehingga Anda perlu menjalankan **tiga** server secara bersamaan:
 
-1.  **Server Backend (PHP):**
-    Buka terminal pertama dan jalankan:
-    ```bash
-    php artisan serve
-    ```
-    *(Aplikasi akan berjalan di http://localhost:8000)*
+### 1. Server Backend (FastAPI)
+Buka terminal baru, masuk ke folder backend, dan jalankan server (pastikan menggunakan port **8001** agar tidak bentrok):
+```bash
+cd fastapi-backend
+uvicorn main:app --reload --port 8001
+```
+*(Aplikasi backend akan berjalan di http://localhost:8001)*
 
-2.  **Server Asset (Vite):**
-    Buka terminal kedua dan jalankan:
-    ```bash
-    npm run dev
-    ```
-    *(Penting untuk memproses CSS Tailwind dan Javascript secara real-time)*
+### 2. Server Frontend (Laravel)
+Buka terminal kedua, masuk ke folder frontend, dan jalankan:
+```bash
+cd laravel-frontend
+php artisan serve
+```
+*(Aplikasi frontend akan berjalan di http://localhost:8000)*
 
-3.  **Server Asset Production (Vite):**
-    Buka terminal kedua dan jalankan:
-    ```bash
-    npm run build
-    ```
-    *(Penting untuk membuat build file agar dapat diakses di production)*
+### 3. Server Asset (Vite)
+Buka terminal ketiga di folder frontend dan jalankan:
+```bash
+npm run dev
+```
+*(Penting untuk memproses CSS Tailwind 4 dan Javascript secara real-time)*
 
-Aplikasi sekarang dapat diakses melalui browser di [http://localhost:8000](http://localhost:8000).
+---
+
+## Catatan Penting
+- Pastikan file `.env` di **laravel-frontend** memiliki nilai `API_URL=http://localhost:8001/api`.
+- Jika Anda mengubah port FastAPI, pastikan `API_URL` di Laravel juga disesuaikan.
+- Gunakan Database yang sama atau pastikan migrasi sudah dijalankan di kedua sisi jika diperlukan.

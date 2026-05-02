@@ -35,16 +35,16 @@
 
             <form action="/login" method="POST">
                 @csrf
-                <!-- Username Field -->
+                <!-- Email Field -->
                 <div class="mb-5">
-                    <label for="username" class="block text-xs font-semibold text-gray-700 mb-2">Username Admin</label>
+                    <label for="email" class="block text-xs font-semibold text-gray-700 mb-2">Email Admin</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <input type="text" id="username" name="username" class="block w-full pl-10 pr-3 py-2.5 border border-blue-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 text-gray-800" placeholder="admin123" required>
+                        <input type="email" id="email" name="email" class="block w-full pl-10 pr-3 py-2.5 border border-blue-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 text-gray-800" placeholder="admin@test.com" required>
                     </div>
                 </div>
 

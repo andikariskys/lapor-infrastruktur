@@ -19,12 +19,12 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
         $response = Http::asForm()->post(config('app.api_url') . '/auth/login', [
-            'username' => $request->username,
+            'username' => $request->email, // Ini sebenarnya email, tapi ngak tau kenapa katanya standar OAuth dia harus disi username
             'password' => $request->password,
         ]);
 
@@ -42,7 +42,7 @@ class AuthController extends Controller
                 
                 if ($user['role'] !== 'admin') {
                     Session::forget('api_token');
-                    return back()->withErrors(['username' => 'Hanya Admin yang dapat mengakses dashboard ini.']);
+                    return back()->withErrors(['email' => 'Hanya Admin yang dapat mengakses dashboard ini.']);
                 }
                 
                 Session::put('user', $user);
@@ -50,7 +50,7 @@ class AuthController extends Controller
             }
         }
 
-        return back()->withErrors(['username' => 'Username atau password salah.']);
+        return back()->withErrors(['email' => 'Email atau password salah.']);
     }
 
     public function logout()

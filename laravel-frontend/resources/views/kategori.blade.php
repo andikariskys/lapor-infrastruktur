@@ -22,7 +22,7 @@
             </div>
             <input type="text" class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 text-gray-800" placeholder="Cari kategori...">
         </div>
-        <button class="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition-colors shadow-sm">
+        <button onclick="openKategoriModal('tambah')" class="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition-colors shadow-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Tambah Kategori
         </button>
@@ -30,183 +30,96 @@
 
     <!-- Categories Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-
-        <!-- Category 1 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-            <!-- Image Area -->
-            <div class="h-32 w-full relative bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=400&h=200&q=80" alt="Road Damage" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
+        @forelse($categories as $category)
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
+            <!-- Icon/Visual Area (Since no image in DB) -->
+            <div class="h-24 w-full relative flex items-center justify-center bg-gray-50 border-b border-gray-100 overflow-hidden">
+                <div class="absolute inset-0 opacity-10 bg-gradient-to-br from-blue-600 to-indigo-800"></div>
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform duration-300" style="background-color: {{ $category['color_code'] ?? '#3b82f6' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.125 1.125 0 0 0 1.591 0l4.318-4.318a1.125 1.125 0 0 0 0-1.591l-9.581-9.581c-.422-.422-.994-.659-1.591-.659Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h.008v.008H7.5V7.5Z"/></svg>
+                </div>
             </div>
             <!-- Content Area -->
             <div class="p-5 flex-1 flex flex-col">
-                <h3 class="text-base font-bold text-gray-900 mb-1">Road Damage</h3>
-                <p class="text-xs text-gray-500 mb-4 flex-1">Kerusakan jalan seperti lubang, aspal retak, dll.</p>
+                <h3 class="text-base font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{{ $category['name'] }}</h3>
+                <p class="text-xs text-gray-500 mb-4 flex-1">{{ $category['description'] ?? 'Tidak ada deskripsi.' }}</p>
                 
                 <!-- Footer -->
                 <div class="flex items-center justify-between pt-4 border-t border-gray-100">
                     <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                        <span class="w-3.5 h-3.5 rounded-full bg-[#9A5B00]"></span>
-                        #9A5B00
+                        <span class="w-3 h-3 rounded-full" style="background-color: {{ $category['color_code'] ?? '#3b82f6' }}"></span>
+                        {{ $category['color_code'] ?? '#3B82F6' }}
                     </div>
                     <div class="flex items-center gap-2">
-                        <button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <button onclick="openKategoriModal('edit', {{ json_encode($category) }})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>
                         </button>
-                        <button class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-                        </button>
+                        <form action="{{ url('/kategori/' . $category['id']) }}" method="POST" onsubmit="return confirm('Hapus kategori ini?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Category 2 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-            <!-- Image Area -->
-            <div class="h-32 w-full relative bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&w=400&h=200&q=80" alt="Street Lighting" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
+        @empty
+        <div class="col-span-full py-20 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
             </div>
-            <!-- Content Area -->
-            <div class="p-5 flex-1 flex flex-col">
-                <h3 class="text-base font-bold text-gray-900 mb-1">Street Lighting</h3>
-                <p class="text-xs text-gray-500 mb-4 flex-1">Masalah penerangan jalan dan lampu.</p>
-                
-                <!-- Footer -->
-                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                        <span class="w-3.5 h-3.5 rounded-full bg-[#1D4ED8]"></span>
-                        #1D4ED8
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>
-                        </button>
-                        <button class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <p class="text-gray-500 font-medium">Belum ada kategori. Silakan tambah kategori baru.</p>
         </div>
-
-        <!-- Category 3 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-            <!-- Image Area -->
-            <div class="h-32 w-full relative bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&w=400&h=200&q=80" alt="Drainage" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
-            </div>
-            <!-- Content Area -->
-            <div class="p-5 flex-1 flex flex-col">
-                <h3 class="text-base font-bold text-gray-900 mb-1">Drainage</h3>
-                <p class="text-xs text-gray-500 mb-4 flex-1">Saluran air, got, dan drainase.</p>
-                
-                <!-- Footer -->
-                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                        <span class="w-3.5 h-3.5 rounded-full bg-[#059669]"></span>
-                        #059669
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>
-                        </button>
-                        <button class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Category 4 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-            <!-- Image Area -->
-            <div class="h-32 w-full relative bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=400&h=200&q=80" alt="Traffic Signs" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
-            </div>
-            <!-- Content Area -->
-            <div class="p-5 flex-1 flex flex-col">
-                <h3 class="text-base font-bold text-gray-900 mb-1">Traffic Signs</h3>
-                <p class="text-xs text-gray-500 mb-4 flex-1">Rambu lalu lintas dan marka jalan.</p>
-                
-                <!-- Footer -->
-                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                        <span class="w-3.5 h-3.5 rounded-full bg-[#DC2626]"></span>
-                        #DC2626
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>
-                        </button>
-                        <button class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        @endforelse
     </div>
 </div>
 
 <!-- Modal Overlay -->
-<div id="modal-overlay" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+<div id="modal-overlay" class="fixed inset-0 bg-black/60 z-40 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
     
     <!-- Modal Kategori Form (Tambah & Edit) -->
-    <div id="modal-kategori" class="bg-white rounded-2xl shadow-xl w-full max-w-lg hidden max-h-[90vh] overflow-y-auto">
-        <div class="p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h2 id="modal-kategori-title" class="text-xl font-bold text-blue-800">Edit Kategori</h2>
-                <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    <div id="modal-kategori" class="bg-white rounded-3xl shadow-2xl w-full max-w-md hidden transform transition-all duration-300 scale-95 opacity-0">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-8">
+                <h2 id="modal-kategori-title" class="text-2xl font-bold text-blue-900 tracking-tight">Edit Kategori</h2>
+                <button type="button" onclick="closeModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <form class="space-y-4">
+            <form id="form-kategori" action="{{ url('/kategori') }}" method="POST" class="space-y-5">
+                @csrf
+                <input type="hidden" name="_method" id="form-method" value="POST">
+                
                 <!-- Nama Kategori -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-800 mb-1.5">Nama Kategori *</label>
-                    <input type="text" id="kategori-nama" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" placeholder="Contoh: Road Damage">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Nama Kategori *</label>
+                    <input type="text" name="name" id="kategori-nama" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all" placeholder="Contoh: Kerusakan Jalan">
                 </div>
 
                 <!-- Deskripsi -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-800 mb-1.5">Deskripsi</label>
-                    <textarea id="kategori-deskripsi" rows="3" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent resize-none" placeholder="Jelaskan kategori ini..."></textarea>
-                </div>
-
-                <!-- Upload Gambar -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-800 mb-1.5">Upload Gambar *</label>
-                    <input type="file" id="kategori-gambar" accept="image/*" onchange="previewImage(event)" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    <p class="text-[11px] text-gray-400 mt-1">Upload gambar ilustrasi kategori (disarankan ukuran 400x400px)</p>
-                </div>
-
-                <!-- Preview Gambar (Hidden initially for Tambah) -->
-                <div id="preview-container" class="hidden">
-                    <label class="block text-sm font-bold text-gray-800 mb-1.5">Preview Gambar</label>
-                    <div class="w-full h-40 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                        <img id="gambar-preview" src="" alt="Preview" class="w-full h-full object-cover">
-                    </div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Deskripsi</label>
+                    <textarea name="description" id="kategori-deskripsi" rows="3" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all resize-none" placeholder="Jelaskan jenis laporan untuk kategori ini..."></textarea>
                 </div>
 
                 <!-- Warna Tema -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-800 mb-1.5">Warna Tema</label>
-                    <input type="text" id="kategori-warna" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" placeholder="#000000">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Warna Tema</label>
+                    <div class="flex gap-3">
+                        <input type="color" name="color_code" id="kategori-warna-picker" class="h-11 w-14 p-1 rounded-xl border border-gray-200 cursor-pointer bg-white">
+                        <input type="text" id="kategori-warna-text" readonly class="flex-1 bg-gray-50 border border-gray-200 text-gray-500 text-sm rounded-2xl px-5 py-3 focus:outline-none" placeholder="#000000">
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="pt-4 flex flex-col sm:flex-row gap-3">
-                    <button type="button" id="btn-submit-kategori" class="w-full sm:flex-1 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition-colors shadow-sm">
-                        Simpan Perubahan
+                <div class="pt-6 flex flex-col sm:flex-row gap-4">
+                    <button type="submit" id="btn-submit-kategori" class="w-full sm:flex-1 py-3.5 bg-blue-700 text-white rounded-2xl text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 active:scale-95">
+                        Simpan Kategori
                     </button>
-                    <button type="button" onclick="closeModal()" class="w-full sm:w-auto px-6 py-2.5 bg-white border border-gray-300 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm">
+                    <button type="button" onclick="closeModal()" class="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl text-sm font-bold hover:bg-gray-50 transition-all">
                         Batal
                     </button>
                 </div>
@@ -218,96 +131,63 @@
 <script>
     const overlay = document.getElementById('modal-overlay');
     const modalKategori = document.getElementById('modal-kategori');
-    const previewContainer = document.getElementById('preview-container');
-    const gambarPreview = document.getElementById('gambar-preview');
+    const colorPicker = document.getElementById('kategori-warna-picker');
+    const colorText = document.getElementById('kategori-warna-text');
+
+    colorPicker.addEventListener('input', (e) => {
+        colorText.value = e.target.value.toUpperCase();
+    });
 
     function closeModal() {
-        overlay.classList.add('hidden');
-        modalKategori.classList.add('hidden');
+        modalKategori.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            modalKategori.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 200);
     }
 
     function openKategoriModal(mode, data = null) {
+        const form = document.getElementById('form-kategori');
+        const methodInput = document.getElementById('form-method');
+        
         // Reset form
         document.getElementById('kategori-nama').value = '';
         document.getElementById('kategori-deskripsi').value = '';
-        document.getElementById('kategori-gambar').value = '';
-        document.getElementById('kategori-warna').value = '';
-        gambarPreview.src = '';
-        previewContainer.classList.add('hidden');
+        colorPicker.value = '#3B82F6';
+        colorText.value = '#3B82F6';
 
         if (mode === 'tambah') {
             document.getElementById('modal-kategori-title').innerText = 'Tambah Kategori Baru';
             document.getElementById('btn-submit-kategori').innerText = 'Tambah Kategori';
+            form.action = "{{ url('/kategori') }}";
+            methodInput.value = 'POST';
         } else if (mode === 'edit' && data) {
             document.getElementById('modal-kategori-title').innerText = 'Edit Kategori';
             document.getElementById('btn-submit-kategori').innerText = 'Simpan Perubahan';
+            form.action = "{{ url('/kategori') }}/" + data.id;
+            methodInput.value = 'PATCH';
 
-            // Populate data
-            document.getElementById('kategori-nama').value = data.nama;
-            document.getElementById('kategori-deskripsi').value = data.deskripsi || '';
-            document.getElementById('kategori-warna').value = data.warna || '';
-
-            // Tampilkan preview gambar jika ada
-            if (data.gambarUrl) {
-                gambarPreview.src = data.gambarUrl;
-                previewContainer.classList.remove('hidden');
-            }
+            document.getElementById('kategori-nama').value = data.name;
+            document.getElementById('kategori-deskripsi').value = data.description || '';
+            colorPicker.value = data.color_code || '#3B82F6';
+            colorText.value = data.color_code || '#3B82F6';
         }
 
-        // Show modal
+        // Show modal with animation
         overlay.classList.remove('hidden');
         modalKategori.classList.remove('hidden');
-    }
-
-    // Handle file preview
-    function previewImage(event) {
-        const input = event.target;
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                gambarPreview.src = e.target.result;
-                previewContainer.classList.remove('hidden');
-            }
-            reader.readAsDataURL(input.files[0]);
-        } else {
-            gambarPreview.src = '';
-            previewContainer.classList.add('hidden');
-        }
-    }
-
-    // Attach click listener for Tambah button (on top bar)
-    document.querySelector('button:has(svg path[d="M12 4.5v15m7.5-7.5h-15"])').setAttribute('onclick', "openKategoriModal('tambah')");
-
-    // Attach click listeners for Edit buttons in the grid
-    // Edit Road Damage
-    const editBtn1 = document.querySelectorAll('.bg-white.rounded-2xl .text-blue-600.hover\\:bg-blue-50')[0];
-    if(editBtn1) {
-        editBtn1.setAttribute('onclick', "openKategoriModal('edit', {nama: 'Road Damage', deskripsi: 'Kerusakan jalan seperti lubang, aspal retak, dll.', warna: '#9A5B00', gambarUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=400&h=200&q=80'})");
-    }
-
-    // Edit Street Lighting
-    const editBtn2 = document.querySelectorAll('.bg-white.rounded-2xl .text-blue-600.hover\\:bg-blue-50')[1];
-    if(editBtn2) {
-        editBtn2.setAttribute('onclick', "openKategoriModal('edit', {nama: 'Street Lighting', deskripsi: 'Masalah penerangan jalan dan lampu.', warna: '#1D4ED8', gambarUrl: 'https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&w=400&h=200&q=80'})");
-    }
-
-    // Edit Drainage
-    const editBtn3 = document.querySelectorAll('.bg-white.rounded-2xl .text-blue-600.hover\\:bg-blue-50')[2];
-    if(editBtn3) {
-        editBtn3.setAttribute('onclick', "openKategoriModal('edit', {nama: 'Drainage', deskripsi: 'Saluran air, got, dan drainase.', warna: '#059669', gambarUrl: 'https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&w=400&h=200&q=80'})");
-    }
-
-    // Edit Traffic Signs
-    const editBtn4 = document.querySelectorAll('.bg-white.rounded-2xl .text-blue-600.hover\\:bg-blue-50')[3];
-    if(editBtn4) {
-        editBtn4.setAttribute('onclick', "openKategoriModal('edit', {nama: 'Traffic Signs', deskripsi: 'Rambu lalu lintas dan marka jalan.', warna: '#DC2626', gambarUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=400&h=200&q=80'})");
+        document.body.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            modalKategori.classList.remove('scale-95', 'opacity-0');
+            modalKategori.classList.add('scale-100', 'opacity-100');
+        }, 10);
     }
 
     // Close on overlay click
     overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-            closeModal();
-        }
+        if (e.target === overlay) closeModal();
     });
 </script>
 @endsection

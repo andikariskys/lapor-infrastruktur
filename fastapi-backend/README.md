@@ -23,21 +23,30 @@ Backend sederhana menggunakan FastAPI untuk proyek Lapor Infrastruktur.
    pip install -r requirements.txt
    ```
 
+## Konfigurasi Environment
+
+Aplikasi ini **wajib** memiliki file `.env` untuk berjalan. Salin template yang tersedia:
+
+```bash
+cp .env.example .env
+```
+
+Buka file `.env` dan lengkapi variabel berikut:
+- `DATABASE_URL`: Koneksi ke MySQL.
+- `SECRET_KEY`: Kunci rahasia untuk JWT.
+- `ALGORITHM`: Algoritma JWT (default: HS256).
+- `ACCESS_TOKEN_EXPIRE_MINUTES`: Durasi login.
+
 ## Menjalankan Aplikasi
 
-Jalankan server pengembangan default:
+Sangat disarankan menjalankan backend di port **8001** agar tidak bentrok dengan frontend Laravel (port 8000):
 
 ```bash
-fastapi dev
+uvicorn main:app --reload --port 8001
 ```
 
-Atau jalankan server pengembangan menggunakan uvicorn:
-
-```bash
-uvicorn main:app --reload
-```
-
-API akan tersedia di `http://127.0.0.1:8000`.
+API akan tersedia di `http://127.0.0.1:8001`.
+Dokumentasi Swagger API dapat diakses di `http://127.0.0.1:8001/docs`.
 
 ### Menghentikan Server
 
