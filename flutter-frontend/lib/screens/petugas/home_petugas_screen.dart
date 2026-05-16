@@ -7,12 +7,14 @@ class HomePetugasScreen extends StatelessWidget {
   final String namaUser;
   final String jabatan;
   final String instansi;
+  final VoidCallback? onViewAllTugas;
 
   const HomePetugasScreen({
     super.key,
     this.namaUser = 'Andika Risky Septiawan',
     this.jabatan = 'Petugas Bina Marga',
     this.instansi = 'DPUPR Kabupaten Karanganyar',
+    this.onViewAllTugas,
   });
 
   // ── Data Dummy ──────────────────────────────────────────────────────────────
@@ -89,9 +91,8 @@ class HomePetugasScreen extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    // Navigate to TugasScreen
-                  },
+                  onTap: onViewAllTugas,
+
                   child: Text(
                     'Lihat Semua',
                     style: AppTextStyles.label.copyWith(

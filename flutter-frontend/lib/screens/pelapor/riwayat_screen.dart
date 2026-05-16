@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/detail_laporan_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class RiwayatScreen extends StatefulWidget {
   const RiwayatScreen({super.key});
@@ -12,6 +13,9 @@ class RiwayatScreen extends StatefulWidget {
 class _RiwayatScreenState extends State<RiwayatScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'Semua';
+  String _searchQuery = '';
+  bool _isLoading = false;
+
   final List<String> _filterOptions = [
     'Semua',
     'Kerusakan jalan',
@@ -20,7 +24,14 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     'Drainase'
   ];
 
-  // Data dipindahkan ke dalam build agar Hot Reload bisa me-refresh data ini
+  // Data — loaded from API or fallback to dummy
+  List<Map<String, dynamic>> _laporanList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
 
   @override
   void dispose() {
@@ -28,17 +39,123 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Data sesuai mockup (dipindah ke sini agar state tidak tersangkut saat Hot Reload)
-    final List<Map<String, dynamic>> laporanList = [
+  Future<void> _loadReports() async {
+    setState(() => _isLoading = true);
+    try {
+      final reports = await ApiService.getMyReports();
+      setState(() {
+        _laporanList = reports.map((r) {
+          final report = r as Map<String, dynamic>;
+          final status = _mapStatus(report['status'] ?? 'pending');
+          final kategoriName = report['category']?['name'] ?? 'Lainnya';
+
+          return {
+            'id': report['id'],
+            'kategori': kategoriName,
+            'tanggal': _formatDate(report['created_at']),
+            'lokasi': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
+            'lokasi_nama': kategoriName,
+            'koordinat': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
+            'deskripsi': report['description'] ?? '-',
+            'status': status,
+            'foto_url': report['photo_url'],
+            'icon': _getIconForCategory(kategoriName),
+            'iconBg': _getIconBgForCategory(kategoriName),
+            'iconColor': _getIconColorForCategory(kategoriName),
+          };
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      // Fallback to dummy data if API fails
+      setState(() {
+        _laporanList = _getDummyData();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _mapStatus(String apiStatus) {
+    switch (apiStatus) {
+      case 'pending':
+        return 'DIAJUKAN';
+      case 'verified':
+        return 'DIPROSES';
+      case 'in_progress':
+        return 'DIPROSES';
+      case 'resolved':
+        return 'SELESAI';
+      case 'spam':
+        return 'DITOLAK';
+      default:
+        return 'DIAJUKAN';
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      final months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      return '${date.day} ${months[date.month]} ${date.year} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} WIB';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  IconData _getIconForCategory(String kategori) {
+    switch (kategori.toLowerCase()) {
+      case 'kerusakan jalan':
+        return Icons.add_road_rounded;
+      case 'lampu penerangan jalan':
+        return Icons.power_off_rounded;
+      case 'drainase':
+        return Icons.water_drop_outlined;
+      case 'rambu lalu lintas dan marka jalan':
+        return Icons.signpost_rounded;
+      default:
+        return Icons.report_problem_rounded;
+    }
+  }
+
+  Color _getIconBgForCategory(String kategori) {
+    switch (kategori.toLowerCase()) {
+      case 'kerusakan jalan':
+        return const Color(0xFFE4EFFF);
+      case 'lampu penerangan jalan':
+        return const Color(0xFFFFDFDF);
+      case 'drainase':
+        return const Color(0xFFE4EFFF);
+      default:
+        return const Color(0xFFFFF0E6);
+    }
+  }
+
+  Color _getIconColorForCategory(String kategori) {
+    switch (kategori.toLowerCase()) {
+      case 'kerusakan jalan':
+        return const Color(0xFF0F3E9F);
+      case 'lampu penerangan jalan':
+        return const Color(0xFF9F0F0F);
+      case 'drainase':
+        return const Color(0xFF0F3E9F);
+      default:
+        return const Color(0xFFE8720C);
+    }
+  }
+
+  List<Map<String, dynamic>> _getDummyData() {
+    return [
       {
         'kategori': 'Kerusakan jalan',
         'tanggal': '26 Apr 2026 • 08:45 WIB',
         'lokasi': 'Kec. Menteng, Jakarta\n-7.534587, 110.838543',
         'lokasi_nama': 'Jl. Karanganyar-Matesih, Kec. Menteng',
         'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Terdapat lubang yang cukup besar di tengah persimpangan. Sangat berbahaya bagi pengendara pada malam hari karena minim penerangan dan sering tergenang air saat hujan. Mohon untuk segera diperbaiki.',
+        'deskripsi': 'Terdapat lubang yang cukup besar di tengah persimpangan. Sangat berbahaya bagi pengendara pada malam hari.',
         'status': 'DIAJUKAN',
         'icon': Icons.add_road_rounded,
         'iconBg': const Color(0xFFE4EFFF),
@@ -50,9 +167,9 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         'lokasi': 'Jl. Sudirman No.12\n-7.534587, 110.838543',
         'lokasi_nama': 'Jl. Sudirman No.12, Jakarta Pusat',
         'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Lampu penerangan jalan di sepanjang ruas jalan ini sudah mati selama lebih dari 2 minggu. Kondisi ini sangat berbahaya bagi pejalan kaki dan pengendara pada malam hari.',
+        'deskripsi': 'Lampu penerangan jalan sudah mati selama lebih dari 2 minggu.',
         'status': 'SELESAI',
-        'respon': 'Tim teknis dari Dinas Bina Marga telah menyelesaikan penggantian lampu penerangan jalan tersebut. Lampu sudah menyala normal. Terima kasih atas laporan Anda.',
+        'respon': 'Tim teknis telah menyelesaikan penggantian lampu. Terima kasih atas laporan Anda.',
         'petugas_nama': 'Admin Dinas PU',
         'petugas_waktu': '16 Mar 2026 • 09:30 WIB',
         'icon': Icons.power_off_rounded,
@@ -65,146 +182,220 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         'lokasi': 'Kec. Jebres, Mojosongo,\nSurakarta',
         'lokasi_nama': 'Jl. Mojosongo Raya, Kec. Jebres, Surakarta',
         'koordinat': '-7.551234, 110.857432',
-        'deskripsi': 'Saluran drainase di depan rumah warga tersumbat dan meluap saat hujan deras. Genangan air mencapai ketinggian 30 cm dan mengalir ke jalan raya.',
+        'deskripsi': 'Saluran drainase tersumbat dan meluap saat hujan deras.',
         'status': 'DITOLAK',
-        'alasan_tolak': 'Laporan tidak dapat diproses karena lokasi yang dilaporkan berada di luar wilayah kewenangan dinas. Silakan hubungi pemerintah kelurahan setempat untuk penanganan lebih lanjut.',
+        'alasan_tolak': 'Lokasi berada di luar wilayah kewenangan dinas.',
         'icon': Icons.water_drop_outlined,
         'iconBg': const Color(0xFFE4EFFF),
         'iconColor': const Color(0xFF0F3E9F),
       },
     ];
+  }
 
-    // Menerapkan filter yang dipilih
-    final filteredList = _selectedFilter == 'Semua' 
-        ? laporanList 
-        : laporanList.where((item) => item['kategori'].toString().toLowerCase() == _selectedFilter.toLowerCase()).toList();
+  void _handleSearch() {
+    setState(() {
+      _searchQuery = _searchController.text.trim().toLowerCase();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Apply filter and search
+    List<Map<String, dynamic>> filteredList = _laporanList;
+
+    if (_selectedFilter != 'Semua') {
+      filteredList = filteredList
+          .where((item) =>
+              item['kategori'].toString().toLowerCase() ==
+              _selectedFilter.toLowerCase())
+          .toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      filteredList = filteredList
+          .where((item) =>
+              item['kategori'].toString().toLowerCase().contains(_searchQuery) ||
+              item['lokasi'].toString().toLowerCase().contains(_searchQuery) ||
+              item['lokasi_nama'].toString().toLowerCase().contains(_searchQuery) ||
+              item['deskripsi'].toString().toLowerCase().contains(_searchQuery))
+          .toList();
+    }
 
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
+      child: RefreshIndicator(
+        onRefresh: _loadReports,
+        color: AppColors.primaryBlue,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
 
-              // Title
-              Text(
-                'Riwayat Laporan',
-                style: AppTextStyles.appTitle.copyWith(fontSize: 22),
-              ),
+                // Title
+                Text(
+                  'Riwayat Laporan',
+                  style: AppTextStyles.appTitle.copyWith(fontSize: 22),
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Search Bar & Search Button
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEBEBEB),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        style: AppTextStyles.inputText,
-                        decoration: InputDecoration(
-                          hintText: 'Cari lokasi atau kerusakan',
-                          hintStyle: AppTextStyles.inputText.copyWith(
-                            color: const Color(0xFF7A7A7A),
+                // Search Bar & Search Button
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEBEBEB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: AppTextStyles.inputText,
+                          onSubmitted: (_) => _handleSearch(),
+                          decoration: InputDecoration(
+                            hintText: 'Cari lokasi atau kerusakan',
+                            hintStyle: AppTextStyles.inputText.copyWith(
+                              color: const Color(0xFF7A7A7A),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFF7A7A7A),
+                              size: 22,
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? GestureDetector(
+                                    onTap: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                    child: const Icon(
+                                      Icons.close_rounded,
+                                      color: Color(0xFF7A7A7A),
+                                      size: 20,
+                                    ),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            color: Color(0xFF7A7A7A),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: _handleSearch,
+                      child: Container(
+                        height: 52,
+                        width: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF003CBF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Filter Button
+                Container(
+                  height: 52,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEBEBEB),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _showFilterModal(context),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.filter_list_rounded,
+                            color: Colors.black87,
                             size: 22,
                           ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
+                          const SizedBox(width: 12),
+                          Text(
+                            _selectedFilter == 'Semua'
+                                ? 'Filter'
+                                : 'Filter: $_selectedFilter',
+                            style: AppTextStyles.label.copyWith(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    height: 52,
-                    width: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF003CBF), // Dark blue button
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.search_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Filter Button
-              Container(
-                height: 52,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEBEBEB),
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _showFilterModal(context),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.filter_list_rounded,
-                          color: Colors.black87,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Filter',
-                          style: AppTextStyles.label.copyWith(
-                            fontSize: 16,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
+
+                const SizedBox(height: 32),
+
+                // Laporan Terbaru Title
+                Text(
+                  'Laporan Terbaru',
+                  style: AppTextStyles.label.copyWith(
+                    fontSize: 18,
+                    color: const Color(0xFF333333),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 16),
 
-              // Laporan Terbaru Title
-              Text(
-                'Laporan Terbaru',
-                style: AppTextStyles.label.copyWith(
-                  fontSize: 18,
-                  color: const Color(0xFF333333),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // List of Laporan
-              filteredList.isEmpty 
-                ? Center(
+                // Loading / List of Laporan
+                if (_isLoading)
+                  const Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40.0),
-                      child: Text(
-                        'Tidak ada laporan untuk kategori ini.',
-                        style: AppTextStyles.label.copyWith(color: const Color(0xFF7A7A7A)),
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryBlue,
                       ),
                     ),
                   )
-                : ListView.builder(
+                else if (filteredList.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40.0),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.inbox_rounded,
+                            size: 48,
+                            color: Colors.grey.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? 'Tidak ditemukan hasil untuk "$_searchQuery"'
+                                : 'Tidak ada laporan untuk kategori ini.',
+                            style: AppTextStyles.label.copyWith(
+                              color: const Color(0xFF7A7A7A),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: filteredList.length,
@@ -213,8 +404,9 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     },
                   ),
 
-              const SizedBox(height: 100), // Bottom padding for nav bar
-            ],
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
       ),
@@ -222,22 +414,25 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   }
 
   Widget _buildLaporanCard(Map<String, dynamic> item) {
-    // Determine badge colors based on status
     Color badgeBgColor;
     Color badgeTextColor;
 
     switch (item['status']) {
       case 'DIAJUKAN':
-        badgeBgColor = const Color(0xFFFCE4CA); // Light orange
-        badgeTextColor = const Color(0xFF8D4F00); // Dark orange/brown
+        badgeBgColor = const Color(0xFFFCE4CA);
+        badgeTextColor = const Color(0xFF8D4F00);
         break;
       case 'SELESAI':
-        badgeBgColor = const Color(0xFFA6FA96); // Bright light green
-        badgeTextColor = const Color(0xFF000000); // Black or very dark green
+        badgeBgColor = const Color(0xFFA6FA96);
+        badgeTextColor = const Color(0xFF000000);
         break;
       case 'DITOLAK':
-        badgeBgColor = const Color(0xFFFFD5D5); // Light red
-        badgeTextColor = const Color(0xFF9F0F0F); // Dark red
+        badgeBgColor = const Color(0xFFFFD5D5);
+        badgeTextColor = const Color(0xFF9F0F0F);
+        break;
+      case 'DIPROSES':
+        badgeBgColor = const Color(0xFFD6E4FF);
+        badgeTextColor = const Color(0xFF0044C4);
         break;
       default:
         badgeBgColor = const Color(0xFFEBEBEB);
@@ -276,12 +471,12 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: item['iconBg'],
+              color: item['iconBg'] ?? const Color(0xFFE4EFFF),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              item['icon'],
-              color: item['iconColor'],
+              item['icon'] ?? Icons.report_problem_rounded,
+              color: item['iconColor'] ?? const Color(0xFF0F3E9F),
               size: 28,
             ),
           ),

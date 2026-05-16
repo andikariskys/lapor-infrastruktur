@@ -12,6 +12,7 @@ class TugasScreen extends StatefulWidget {
 class _TugasScreenState extends State<TugasScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'Semua';
+  String _searchQuery = '';
 
   final List<String> _filterOptions = [
     'Semua',
@@ -76,9 +77,14 @@ class _TugasScreenState extends State<TugasScreen> {
       },
     ];
 
-    final filteredList = _selectedFilter == 'Semua'
-        ? tugasList
-        : tugasList.where((item) => item['status'] == _selectedFilter).toList();
+    final filteredList = tugasList.where((item) {
+      final matchesFilter = _selectedFilter == 'Semua' || item['status'] == _selectedFilter;
+      final matchesSearch = _searchQuery.isEmpty ||
+          item['kategori'].toString().toLowerCase().contains(_searchQuery) ||
+          item['lokasi'].toString().toLowerCase().contains(_searchQuery) ||
+          item['deskripsi'].toString().toLowerCase().contains(_searchQuery);
+      return matchesFilter && matchesSearch;
+    }).toList();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -110,6 +116,11 @@ class _TugasScreenState extends State<TugasScreen> {
                       child: TextField(
                         controller: _searchController,
                         style: AppTextStyles.inputText,
+                        onSubmitted: (_) {
+                          setState(() {
+                            _searchQuery = _searchController.text.trim().toLowerCase();
+                          });
+                        },
                         decoration: InputDecoration(
                           hintText: 'Cari lokasi atau kerusakan',
                           hintStyle: AppTextStyles.inputText.copyWith(
@@ -117,6 +128,16 @@ class _TugasScreenState extends State<TugasScreen> {
                           ),
                           prefixIcon: const Icon(Icons.search_rounded,
                               color: Color(0xFF7A7A7A), size: 22),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                  child: const Icon(Icons.close_rounded,
+                                      color: Color(0xFF7A7A7A), size: 20),
+                                )
+                              : null,
                           border: InputBorder.none,
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 16),
@@ -125,15 +146,22 @@ class _TugasScreenState extends State<TugasScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    height: 52,
-                    width: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF003CBF),
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _searchQuery = _searchController.text.trim().toLowerCase();
+                      });
+                    },
+                    child: Container(
+                      height: 52,
+                      width: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF003CBF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.search_rounded,
+                          color: Colors.white, size: 24),
                     ),
-                    child: const Icon(Icons.search_rounded,
-                        color: Colors.white, size: 24),
                   ),
                 ],
               ),
