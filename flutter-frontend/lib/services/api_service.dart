@@ -1,13 +1,61 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Central API service that manages all communication with the FastAPI backend.
-/// Handles token storage, auth headers, and all CRUD operations.
+/// Uses Dio with interceptors for automatic token management and error handling.
 class ApiService {
   // Change this to your backend URL
   static const String baseUrl = 'http://localhost:8001/api';
+
+  // Singleton Dio instance with interceptors
+  static Dio? _dio;
+
+  /// Get the singleton Dio instance, configured with interceptors.
+  static Dio get dio {
+    _dio ??= _createDio();
+    return _dio!;
+  }
+
+  /// Creates a new Dio instance with base options and interceptors.
+  static Dio _createDio() {
+    final dioInstance = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    // Add auth interceptor for automatic token attachment & error handling
+    dioInstance.interceptors.add(_AuthInterceptor());
+
+    // Add logging interceptor (only in debug mode)
+    assert(() {
+      dioInstance.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => print('🌐 DIO: $obj'),
+        ),
+      );
+      return true;
+    }());
+
+    return dioInstance;
+  }
+
+  /// Reset Dio instance (useful after logout to clear interceptor state).
+  static void resetDio() {
+    _dio?.close();
+    _dio = null;
+  }
 
   // ─── Token Management ─────────────────────────────────────────────────────
 
@@ -41,10 +89,26 @@ class ApiService {
     return null;
   }
 
-  static Map<String, String> _authHeaders(String token) => {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
+  // ─── Helper: Extract error message from Dio exceptions ─────────────────────
+
+  static String _extractError(DioException e, String fallback) {
+    if (e.response?.data != null) {
+      try {
+        final data = e.response!.data;
+        if (data is Map<String, dynamic>) {
+          return data['detail']?.toString() ?? fallback;
+        }
+      } catch (_) {}
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Koneksi timeout. Periksa jaringan Anda.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Tidak dapat terhubung ke server.';
+    }
+    return fallback;
+  }
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -55,23 +119,20 @@ class ApiService {
     required String phone,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'password': password,
-        'role': 'citizen',
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Registrasi gagal');
+    try {
+      final response = await dio.post(
+        '/auth/register',
+        data: {
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'password': password,
+          'role': 'citizen',
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Registrasi gagal'));
     }
   }
 
@@ -80,42 +141,38 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'username': email,
-        'password': password,
-      },
-    );
+    try {
+      // Login endpoint uses form-urlencoded format (OAuth2 standard)
+      final response = await dio.post(
+        '/auth/login',
+        data: {
+          'username': email,
+          'password': password,
+        },
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+        ),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      final data = response.data as Map<String, dynamic>;
       await saveToken(data['access_token']);
+
       // Fetch user profile right away
       final profile = await getMyProfile();
       await saveUserData(profile);
       return profile;
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Login gagal');
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Login gagal'));
     }
   }
 
   /// Get current user profile
   static Future<Map<String, dynamic>> getMyProfile() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/auth/me'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal memuat profil');
+    try {
+      final response = await dio.get('/auth/me');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat profil'));
     }
   }
 
@@ -130,79 +187,59 @@ class ApiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final formData = FormData.fromMap({
+        'description': description,
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'category_id': categoryId.toString(),
+        'image': MultipartFile.fromBytes(
+          imageBytes,
+          filename: fileName,
+        ),
+      });
 
-    final request =
-        http.MultipartRequest('POST', Uri.parse('$baseUrl/reports'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['description'] = description;
-    request.fields['latitude'] = latitude.toString();
-    request.fields['longitude'] = longitude.toString();
-    request.fields['category_id'] = categoryId.toString();
-    request.files.add(
-      http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Gagal mengirim laporan');
+      final response = await dio.post(
+        '/reports',
+        data: formData,
+        options: Options(
+          // Let Dio set the correct multipart content-type with boundary
+          contentType: Headers.multipartFormDataContentType,
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim laporan'));
     }
   }
 
   /// Get my reports (citizen)
   static Future<List<dynamic>> getMyReports() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/my'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Gagal memuat laporan');
+    try {
+      final response = await dio.get('/reports/my');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat laporan'));
     }
   }
 
   /// Get assigned reports (officer)
   static Future<List<dynamic>> getAssignedReports() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/assigned'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Gagal memuat tugas');
+    try {
+      final response = await dio.get('/reports/assigned');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat tugas'));
     }
   }
 
   /// Get report detail
   static Future<Map<String, dynamic>> getReportDetail(int reportId) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/$reportId'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal memuat detail laporan');
+    try {
+      final response = await dio.get('/reports/$reportId');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat detail laporan'));
     }
   }
 
@@ -211,19 +248,14 @@ class ApiService {
     required int reportId,
     required String status,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/reports/$reportId/verify'),
-      headers: _authHeaders(token),
-      body: json.encode({'status': status}),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengupdate status');
+    try {
+      final response = await dio.patch(
+        '/reports/$reportId/verify',
+        data: {'status': status},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengupdate status'));
     }
   }
 
@@ -232,25 +264,17 @@ class ApiService {
     String? name,
     String? phone,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (phone != null) body['phone'] = phone;
 
-    final body = <String, dynamic>{};
-    if (name != null) body['name'] = name;
-    if (phone != null) body['phone'] = phone;
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/users/me'),
-      headers: _authHeaders(token),
-      body: json.encode(body),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      final response = await dio.patch('/users/me', data: body);
+      final data = response.data as Map<String, dynamic>;
       await saveUserData(data);
       return data;
-    } else {
-      throw Exception('Gagal memperbarui profil');
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memperbarui profil'));
     }
   }
 
@@ -266,17 +290,16 @@ class ApiService {
 
     // Verify old password by attempting login
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
+      await dio.post(
+        '/auth/login',
+        data: {
           'username': userData['email'],
           'password': oldPassword,
         },
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+        ),
       );
-      if (response.statusCode != 200) {
-        throw Exception('Kata sandi lama salah');
-      }
     } catch (e) {
       throw Exception('Kata sandi lama salah');
     }
@@ -292,22 +315,17 @@ class ApiService {
     required String content,
     required int rating,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/reports/$reportId/feedback'),
-      headers: _authHeaders(token),
-      body: json.encode({
-        'content': content,
-        'rating': rating,
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengirim ulasan');
+    try {
+      final response = await dio.post(
+        '/reports/$reportId/feedback',
+        data: {
+          'content': content,
+          'rating': rating,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim ulasan'));
     }
   }
 
@@ -316,40 +334,72 @@ class ApiService {
     required int reportId,
     required String note,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final formData = FormData.fromMap({
+        'note': note,
+      });
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/reports/$reportId/progress'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['note'] = note;
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengirim progres');
+      final response = await dio.post(
+        '/reports/$reportId/progress',
+        data: formData,
+        options: Options(
+          contentType: Headers.multipartFormDataContentType,
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim progres'));
     }
   }
 
   /// Get categories
   static Future<List<dynamic>> getCategories() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/categories'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      return [];
+    try {
+      final response = await dio.get('/categories');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat kategori'));
     }
+  }
+}
+
+// ─── Auth Interceptor ──────────────────────────────────────────────────────
+
+/// Interceptor that automatically attaches the JWT token to requests
+/// and handles 401 unauthorized responses.
+class _AuthInterceptor extends Interceptor {
+  @override
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    // Skip token for auth endpoints (login/register)
+    final path = options.path;
+    if (path.contains('/auth/login') || path.contains('/auth/register')) {
+      return handler.next(options);
+    }
+
+    // Attach token if available
+    final token = await ApiService.getToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+
+    return handler.next(options);
+  }
+
+  @override
+  void onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    // Handle 401 Unauthorized — clear token
+    if (err.response?.statusCode == 401) {
+      await ApiService.clearToken();
+      ApiService.resetDio();
+      // Optionally: navigate to login screen via a global navigator key
+    }
+
+    return handler.next(err);
   }
 }

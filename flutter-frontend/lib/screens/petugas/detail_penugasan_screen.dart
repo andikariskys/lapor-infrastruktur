@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/services/api_service.dart';
@@ -17,7 +18,15 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
   final TextEditingController _catatanController = TextEditingController();
   bool _hasFile = false;
   String? _namaFile;
+  Uint8List? _imageBytes;
   bool _isLoading = false;
+  late String _currentStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.penugasan['status'] ?? 'DIPROSES';
+  }
 
   @override
   void dispose() {
@@ -41,54 +50,178 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
     }
   }
 
-  void _pickFile() {
-    setState(() {
-      _hasFile = true;
-      _namaFile = 'bukti_perbaikan.jpg';
-    });
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : AppColors.primaryBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
-  void _handleMulaiPengerjaan() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Status berhasil diperbarui ke DIKERJAKAN'),
-          backgroundColor: AppColors.primaryBlue,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  void _pickFile() {
+    final ImagePicker picker = ImagePicker();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Pilih Sumber Gambar',
+              style: AppTextStyles.label.copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8ECF5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              title: Text('Kamera', style: AppTextStyles.label.copyWith(fontSize: 16)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickFromSource(picker, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8ECF5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.photo_library_rounded,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              title: Text('Galeri', style: AppTextStyles.label.copyWith(fontSize: 16)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickFromSource(picker, ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
+      ),
+    );
+  }
+
+  void _pickFromSource(ImagePicker picker, ImageSource source) async {
+    try {
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
       );
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _hasFile = true;
+          _namaFile = image.name;
+          _imageBytes = bytes;
+        });
+        _showSnackBar('File berhasil dipilih: ${image.name}');
+      }
+    } catch (e) {
+      _showSnackBar('Gagal memilih file: ${e.toString()}', isError: true);
     }
   }
 
-  void _handleKonfirmasiSelesai() async {
-    if (!_hasFile) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Harap unggah bukti perbaikan terlebih dahulu.'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+  void _handleMulaiPengerjaan() async {
+    final reportId = widget.penugasan['id'];
+    if (reportId == null) {
+      _showSnackBar('ID laporan tidak ditemukan.', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
 
-    if (mounted) {
+    try {
+      await ApiService.updateReportStatus(
+        reportId: reportId,
+        status: 'in_progress',
+      );
+      if (!mounted) return;
+      setState(() => _currentStatus = 'DIKERJAKAN');
+      _showSnackBar('Status berhasil diperbarui ke DIKERJAKAN');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _handleKonfirmasiSelesai() async {
+    if (!_hasFile || _imageBytes == null) {
+      _showSnackBar('Harap unggah bukti perbaikan terlebih dahulu.', isError: true);
+      return;
+    }
+
+    final reportId = widget.penugasan['id'];
+    if (reportId == null) {
+      _showSnackBar('ID laporan tidak ditemukan.', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Kirim progres pekerjaan dengan catatan
+      final catatan = _catatanController.text.trim();
+      if (catatan.isNotEmpty) {
+        await ApiService.addWorkProgress(
+          reportId: reportId,
+          note: catatan,
+        );
+      }
+
+      // 2. Update status ke resolved
+      await ApiService.updateReportStatus(
+        reportId: reportId,
+        status: 'resolved',
+      );
+
+      if (!mounted) return;
+      setState(() => _currentStatus = 'SELESAI');
+
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (ctx) => _buildSuksesDialog(ctx),
       );
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -158,7 +291,7 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
       ),
     );
 
-    final String status = widget.penugasan['status'] ?? 'DIPROSES';
+    final String status = _currentStatus;
     final String kategori = widget.penugasan['kategori'] ?? '-';
     final String tanggal = widget.penugasan['tanggal'] ?? '-';
     final String lokasiNama = widget.penugasan['lokasi_nama'] ?? '-';
@@ -478,7 +611,7 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
                         onTap: _pickFile,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          height: 110,
+                          height: _hasFile && _imageBytes != null ? 180 : 110,
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: _hasFile
@@ -492,7 +625,43 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
                               width: 1.5,
                             ),
                           ),
-                          child: _hasFile
+                          child: _hasFile && _imageBytes != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.memory(_imageBytes!, fit: BoxFit.cover),
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.black.withValues(alpha: 0.6),
+                                              ],
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Ketuk untuk ganti file',
+                                            textAlign: TextAlign.center,
+                                            style: AppTextStyles.appSubtitle.copyWith(
+                                              fontSize: 12,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : _hasFile
                               ? Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

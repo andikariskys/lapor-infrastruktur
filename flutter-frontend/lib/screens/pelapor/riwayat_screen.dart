@@ -74,9 +74,9 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       // Reverse geocode all report locations in background
       _reverseGeocodeAll();
     } catch (_) {
-      // Fallback to dummy data if API fails
+      // Show empty state with error
       setState(() {
-        _laporanList = _getDummyData();
+        _laporanList = [];
         _isLoading = false;
       });
     }
@@ -180,50 +180,8 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getDummyData() {
-    return [
-      {
-        'kategori': 'Kerusakan jalan',
-        'tanggal': '26 Apr 2026 • 08:45 WIB',
-        'lokasi': 'Kec. Menteng, Jakarta\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Karanganyar-Matesih, Kec. Menteng',
-        'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Terdapat lubang yang cukup besar di tengah persimpangan. Sangat berbahaya bagi pengendara pada malam hari.',
-        'status': 'DIAJUKAN',
-        'icon': Icons.add_road_rounded,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-      {
-        'kategori': 'Lampu penerangan jalan',
-        'tanggal': '15 Mar 2026 • 08:15 WIB',
-        'lokasi': 'Jl. Sudirman No.12\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Sudirman No.12, Jakarta Pusat',
-        'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Lampu penerangan jalan sudah mati selama lebih dari 2 minggu.',
-        'status': 'SELESAI',
-        'respon': 'Tim teknis telah menyelesaikan penggantian lampu. Terima kasih atas laporan Anda.',
-        'petugas_nama': 'Admin Dinas PU',
-        'petugas_waktu': '16 Mar 2026 • 09:30 WIB',
-        'icon': Icons.power_off_rounded,
-        'iconBg': const Color(0xFFFFDFDF),
-        'iconColor': const Color(0xFF9F0F0F),
-      },
-      {
-        'kategori': 'Drainase',
-        'tanggal': '21 Jan 2026 • 12:45 WIB',
-        'lokasi': 'Kec. Jebres, Mojosongo,\nSurakarta',
-        'lokasi_nama': 'Jl. Mojosongo Raya, Kec. Jebres, Surakarta',
-        'koordinat': '-7.551234, 110.857432',
-        'deskripsi': 'Saluran drainase tersumbat dan meluap saat hujan deras.',
-        'status': 'DITOLAK',
-        'alasan_tolak': 'Lokasi berada di luar wilayah kewenangan dinas.',
-        'icon': Icons.water_drop_outlined,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-    ];
-  }
+
+
 
   void _handleSearch() {
     setState(() {

@@ -1,6 +1,5 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 // Conditional import for web platform
 import 'location_service_stub.dart'
@@ -21,6 +20,18 @@ class LocationData {
 }
 
 class LocationService {
+  // Separate Dio instance for geocoding (no auth needed)
+  static final Dio _geoDio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {
+        'User-Agent': 'LaporInfrastruktur/1.0',
+        'Accept-Language': 'id',
+      },
+    ),
+  );
+
   /// Get current location with address (reverse geocoding)
   static Future<LocationData> getCurrentLocation() async {
     final coords = await platform_location.getCurrentPosition();
@@ -38,17 +49,19 @@ class LocationService {
   /// Reverse geocode coordinates to human-readable address using OpenStreetMap Nominatim
   static Future<String> reverseGeocode(double lat, double lon) async {
     try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=18&addressdetails=1',
+      final response = await _geoDio.get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'format': 'json',
+          'lat': lat,
+          'lon': lon,
+          'zoom': 18,
+          'addressdetails': 1,
+        },
       );
 
-      final response = await http.get(url, headers: {
-        'User-Agent': 'LaporInfrastruktur/1.0',
-        'Accept-Language': 'id',
-      });
-
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = response.data as Map<String, dynamic>;
         final address = data['address'] as Map<String, dynamic>?;
 
         if (address != null) {
