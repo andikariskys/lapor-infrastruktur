@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class BuatLaporanScreen extends StatefulWidget {
   const BuatLaporanScreen({super.key});
@@ -27,9 +28,12 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Data dummy lokasi (would come from GPS in production)
-  final String _lokasi = 'Jl. Karanganyar-Matesih';
-  final String _koordinat = '-7.534587, 110.838543';
+  // Lokasi (loaded from GPS)
+  String _lokasi = 'Memuat lokasi...';
+  String _koordinat = '...';
+  double? _latitude;
+  double? _longitude;
+  bool _isLoadingLocation = true;
 
   final List<String> _kategoriList = [
     'Kerusakan jalan',
@@ -64,16 +68,37 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
+    _fadeAnim = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    try {
+      final location = await LocationService.getCurrentLocation();
+      if (!mounted) return;
+      setState(() {
+        _lokasi = location.address;
+        _koordinat = location.koordinat;
+        _latitude = location.latitude;
+        _longitude = location.longitude;
+        _isLoadingLocation = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _lokasi = 'Lokasi tidak tersedia';
+        _koordinat = 'Izinkan akses lokasi di browser';
+        _isLoadingLocation = false;
+      });
+    }
   }
 
   @override
@@ -96,7 +121,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
 
   void _pickFile() async {
     final ImagePicker picker = ImagePicker();
-    
+
     // Show options: Camera or Gallery
     showModalBottomSheet(
       context: context,
@@ -122,10 +147,15 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                   color: const Color(0xFFE8ECF5),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.camera_alt_rounded,
-                    color: AppColors.primaryBlue),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: AppColors.primaryBlue,
+                ),
               ),
-              title: Text('Kamera', style: AppTextStyles.label.copyWith(fontSize: 16)),
+              title: Text(
+                'Kamera',
+                style: AppTextStyles.label.copyWith(fontSize: 16),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromSource(picker, ImageSource.camera);
@@ -139,10 +169,15 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                   color: const Color(0xFFE8ECF5),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.photo_library_rounded,
-                    color: AppColors.primaryBlue),
+                child: const Icon(
+                  Icons.photo_library_rounded,
+                  color: AppColors.primaryBlue,
+                ),
               ),
-              title: Text('Galeri', style: AppTextStyles.label.copyWith(fontSize: 16)),
+              title: Text(
+                'Galeri',
+                style: AppTextStyles.label.copyWith(fontSize: 16),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromSource(picker, ImageSource.gallery);
@@ -179,11 +214,22 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
 
   void _handleKirimLaporan() async {
     if (!_hasFile || _imageBytes == null) {
-      _showSnackBar('Harap pilih file bukti dokumen terlebih dahulu.', isError: true);
+      _showSnackBar(
+        'Harap pilih file bukti dokumen terlebih dahulu.',
+        isError: true,
+      );
       return;
     }
     if (_deskripsiController.text.trim().isEmpty) {
       _showSnackBar('Harap isi deskripsi laporan.', isError: true);
+      return;
+    }
+
+    if (_latitude == null || _longitude == null) {
+      _showSnackBar(
+        'Lokasi belum tersedia. Harap izinkan akses lokasi.',
+        isError: true,
+      );
       return;
     }
 
@@ -192,8 +238,8 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     try {
       await ApiService.createReport(
         description: _deskripsiController.text.trim(),
-        latitude: -7.534587, // Would come from GPS
-        longitude: 110.838543,
+        latitude: _latitude!,
+        longitude: _longitude!,
         categoryId: _getCategoryId(_selectedKategori),
         imageBytes: _imageBytes!,
         fileName: _namaFile ?? 'foto_laporan.jpg',
@@ -269,7 +315,10 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                   ),
                   elevation: 0,
                 ),
-                child: Text('Kembali ke Beranda', style: AppTextStyles.buttonText),
+                child: Text(
+                  'Kembali ke Beranda',
+                  style: AppTextStyles.buttonText,
+                ),
               ),
             ),
           ],
@@ -309,21 +358,30 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                   const SizedBox(height: 24),
 
                   // 2. Bukti Dokumen
-                  Text('Bukti Dokumen', style: AppTextStyles.label.copyWith(fontSize: 15)),
+                  Text(
+                    'Bukti Dokumen',
+                    style: AppTextStyles.label.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 10),
                   _buildUploadArea(),
 
                   const SizedBox(height: 24),
 
                   // 3. Kategori
-                  Text('Kategori', style: AppTextStyles.label.copyWith(fontSize: 15)),
+                  Text(
+                    'Kategori',
+                    style: AppTextStyles.label.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 10),
                   _buildKategoriDropdown(),
 
                   const SizedBox(height: 24),
 
                   // 4. Deskripsi
-                  Text('Deskripsi', style: AppTextStyles.label.copyWith(fontSize: 15)),
+                  Text(
+                    'Deskripsi',
+                    style: AppTextStyles.label.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 10),
                   _buildDeskripsiField(),
 
@@ -412,19 +470,39 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'LOKASI SAAT INI',
-                  style: AppTextStyles.appSubtitle.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryBlue,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'LOKASI SAAT INI',
+                      style: AppTextStyles.appSubtitle.copyWith(
+                        fontSize: 10,
+                        letterSpacing: 0.8,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                    if (_isLoadingLocation) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 3),
                 Text(
                   _lokasi,
-                  style: AppTextStyles.label.copyWith(fontSize: 14, color: AppColors.textDark),
+                  style: AppTextStyles.label.copyWith(
+                    fontSize: 14,
+                    color: AppColors.textDark,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -468,10 +546,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.memory(
-                      _imageBytes!,
-                      fit: BoxFit.cover,
-                    ),
+                    Image.memory(_imageBytes!, fit: BoxFit.cover),
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -502,52 +577,52 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
                 ),
               )
             : _hasFile
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.primaryBlue,
-                        size: 36,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _namaFile ?? '',
-                        style: AppTextStyles.label.copyWith(
-                          color: AppColors.primaryBlue,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ketuk untuk ganti file',
-                        style: AppTextStyles.appSubtitle.copyWith(fontSize: 11),
-                      ),
-                    ],
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.cloud_upload_outlined,
-                        color: AppColors.textGrey.withValues(alpha: 0.7),
-                        size: 38,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Pilih File Lampiran',
-                        style: AppTextStyles.label.copyWith(
-                          color: AppColors.textGrey,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Format: JPG atau PNG (Maks. 5MB)',
-                        style: AppTextStyles.appSubtitle.copyWith(fontSize: 11),
-                      ),
-                    ],
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.primaryBlue,
+                    size: 36,
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _namaFile ?? '',
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.primaryBlue,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ketuk untuk ganti file',
+                    style: AppTextStyles.appSubtitle.copyWith(fontSize: 11),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_upload_outlined,
+                    color: AppColors.textGrey.withValues(alpha: 0.7),
+                    size: 38,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Pilih File Lampiran',
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.textGrey,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Format: JPG atau PNG (Maks. 5MB)',
+                    style: AppTextStyles.appSubtitle.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -607,7 +682,9 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
             hintText: 'Jelaskan masalah infrastruktur secara detail...',
-            hintStyle: AppTextStyles.inputText.copyWith(color: AppColors.hintText),
+            hintStyle: AppTextStyles.inputText.copyWith(
+              color: AppColors.hintText,
+            ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -627,10 +704,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
           size: 16,
         ),
         const SizedBox(width: 6),
-        Text(
-          'Note: ',
-          style: AppTextStyles.appSubtitle.copyWith(fontSize: 12),
-        ),
+        Text('Note: ', style: AppTextStyles.appSubtitle.copyWith(fontSize: 12)),
         Text(
           'Maks 3 laporan per hari',
           style: AppTextStyles.appSubtitle.copyWith(

@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Handles token storage, auth headers, and all CRUD operations.
 class ApiService {
   // Change this to your backend URL
-  static const String baseUrl = 'http://localhost:8000/api';
+  static const String baseUrl = 'http://localhost:8001/api';
 
   // ─── Token Management ─────────────────────────────────────────────────────
 

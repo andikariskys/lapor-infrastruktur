@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class DetailLaporanScreen extends StatelessWidget {
   final Map<String, dynamic> laporan;
@@ -131,7 +133,7 @@ class DetailLaporanScreen extends StatelessWidget {
               _buildSectionLabel('BUKTI DOKUMENTASI'),
               const SizedBox(height: 12),
               Container(
-                height: 180,
+                height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8ECF5),
@@ -143,12 +145,36 @@ class DetailLaporanScreen extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  // TODO: ganti dengan Image.network(laporan['foto_url']) saat API siap
-                  child: const Icon(
-                    Icons.image_outlined,
-                    size: 60,
-                    color: Color(0xFF9E9E9E),
-                  ),
+                  child: laporan['foto_url'] != null
+                      ? Image.network(
+                          '${ApiService.baseUrl.replaceAll('/api', '')}${laporan['foto_url']}',
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primaryBlue,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                size: 60,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            );
+                          },
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 60,
+                            color: Color(0xFF9E9E9E),
+                          ),
+                        ),
                 ),
               ),
 
@@ -191,49 +217,91 @@ class DetailLaporanScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFE2E2E2)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE8ECF5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.location_on_rounded,
-                        color: AppColors.primaryBlue,
-                        size: 24,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE8ECF5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.location_on_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionLabel('LOKASI KEJADIAN'),
+                              const SizedBox(height: 4),
+                              Text(
+                                lokasi,
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              if (koordinat.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  koordinat,
+                                  style: AppTextStyles.bodyText.copyWith(
+                                    fontSize: 13,
+                                    color: const Color(0xFF7A7A7A),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionLabel('LOKASI KEJADIAN'),
-                          const SizedBox(height: 4),
-                          Text(
-                            lokasi,
+                    if (koordinat.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final coords = koordinat.split(',');
+                            if (coords.length == 2) {
+                              final lat = coords[0].trim();
+                              final lng = coords[1].trim();
+                              final Uri mapsUri = Uri.parse(
+                                'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                              );
+                              try {
+                                await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+                              } catch (_) {}
+                            }
+                          },
+                          icon: const Icon(Icons.map_outlined,
+                              color: AppColors.primaryBlue, size: 18),
+                          label: Text(
+                            'Buka Google Maps',
                             style: AppTextStyles.label.copyWith(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87,
+                              fontSize: 13,
+                              color: AppColors.primaryBlue,
                             ),
                           ),
-                          if (koordinat.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              koordinat,
-                              style: AppTextStyles.bodyText.copyWith(
-                                fontSize: 13,
-                                color: const Color(0xFF7A7A7A),
-                              ),
-                            ),
-                          ],
-                        ],
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                                color: AppColors.primaryBlue, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

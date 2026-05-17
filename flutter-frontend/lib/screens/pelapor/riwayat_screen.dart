@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/detail_laporan_screen.dart';
 import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class RiwayatScreen extends StatefulWidget {
   const RiwayatScreen({super.key});
@@ -48,14 +49,18 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           final report = r as Map<String, dynamic>;
           final status = _mapStatus(report['status'] ?? 'pending');
           final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          final lat = report['latitude'] ?? 0.0;
+          final lon = report['longitude'] ?? 0.0;
 
           return {
             'id': report['id'],
             'kategori': kategoriName,
             'tanggal': _formatDate(report['created_at']),
-            'lokasi': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
-            'lokasi_nama': kategoriName,
-            'koordinat': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
+            'lokasi': 'Memuat lokasi...',
+            'lokasi_nama': 'Memuat...',
+            'koordinat': '${(lat as num).toStringAsFixed(6)}, ${(lon as num).toStringAsFixed(6)}',
+            'latitude': lat,
+            'longitude': lon,
             'deskripsi': report['description'] ?? '-',
             'status': status,
             'foto_url': report['photo_url'],
@@ -66,12 +71,40 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         }).toList();
         _isLoading = false;
       });
+      // Reverse geocode all report locations in background
+      _reverseGeocodeAll();
     } catch (_) {
       // Fallback to dummy data if API fails
       setState(() {
         _laporanList = _getDummyData();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _reverseGeocodeAll() async {
+    for (int i = 0; i < _laporanList.length; i++) {
+      final lat = _laporanList[i]['latitude'];
+      final lon = _laporanList[i]['longitude'];
+      if (lat != null && lon != null && lat != 0.0 && lon != 0.0) {
+        try {
+          final address = await LocationService.reverseGeocode(
+            (lat as num).toDouble(),
+            (lon as num).toDouble(),
+          );
+          if (!mounted) return;
+          setState(() {
+            _laporanList[i]['lokasi'] = address;
+            _laporanList[i]['lokasi_nama'] = address;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _laporanList[i]['lokasi'] = _laporanList[i]['koordinat'];
+            _laporanList[i]['lokasi_nama'] = _laporanList[i]['koordinat'];
+          });
+        }
+      }
     }
   }
 

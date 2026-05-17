@@ -5,6 +5,7 @@ import 'package:lapor_infrastruktur/screens/pelapor/buat_laporan_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/riwayat_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/profil_screen.dart';
 import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaUser;
@@ -23,8 +24,9 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<Offset> _slideAnim;
 
   // Data — loaded dynamically
-  final String _lokasi = 'Jl. Karanganyar-Matesih';
-  final String _koordinat = '-7.534587, 110.838543';
+  String _lokasi = 'Memuat lokasi...';
+  String _koordinat = '...';
+  bool _isLoadingLocation = true;
   int _limitTerpakai = 0;
   final int _limitTotal = 3;
   int _totalLaporan = 0;
@@ -51,6 +53,26 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _animController.forward();
     _loadReportStats();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    try {
+      final location = await LocationService.getCurrentLocation();
+      if (!mounted) return;
+      setState(() {
+        _lokasi = location.address;
+        _koordinat = location.koordinat;
+        _isLoadingLocation = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _lokasi = 'Lokasi tidak tersedia';
+        _koordinat = 'Izinkan akses lokasi di browser';
+        _isLoadingLocation = false;
+      });
+    }
   }
 
   Future<void> _loadReportStats() async {
@@ -264,14 +286,29 @@ class _HomeScreenState extends State<HomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'LOKASI SAAT INI',
-                  style: AppTextStyles.appSubtitle.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryBlue,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'LOKASI SAAT INI',
+                      style: AppTextStyles.appSubtitle.copyWith(
+                        fontSize: 10,
+                        letterSpacing: 0.8,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                    if (_isLoadingLocation) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 3),
                 Text(

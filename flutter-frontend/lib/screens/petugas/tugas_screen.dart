@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/petugas/detail_penugasan_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class TugasScreen extends StatefulWidget {
   const TugasScreen({super.key});
@@ -13,6 +15,7 @@ class _TugasScreenState extends State<TugasScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
+  bool _isLoading = true;
 
   final List<String> _filterOptions = [
     'Semua',
@@ -22,62 +25,123 @@ class _TugasScreenState extends State<TugasScreen> {
     'SELESAI',
   ];
 
+  List<Map<String, dynamic>> _tugasList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssignedReports();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  Future<void> _loadAssignedReports() async {
+    setState(() => _isLoading = true);
+    try {
+      final reports = await ApiService.getAssignedReports();
+      setState(() {
+        _tugasList = reports.map((r) {
+          final report = r as Map<String, dynamic>;
+          final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          final status = _mapStatus(report['status'] ?? 'pending');
+          final lat = report['latitude'] ?? 0.0;
+          final lon = report['longitude'] ?? 0.0;
+
+          return {
+            'id': report['id'],
+            'kategori': kategoriName,
+            'tanggal': _formatDate(report['created_at']),
+            'lokasi': 'Memuat lokasi...',
+            'lokasi_nama': 'Memuat...',
+            'koordinat': '${(lat as num).toStringAsFixed(6)}, ${(lon as num).toStringAsFixed(6)}',
+            'latitude': lat,
+            'longitude': lon,
+            'deskripsi': report['description'] ?? '-',
+            'status': status,
+            'foto_url': report['photo_url'],
+            'catatan_admin': report['assignments'] != null && (report['assignments'] as List).isNotEmpty
+                ? (report['assignments'] as List).first['note'] ?? ''
+                : '',
+            'icon': Icons.add_road_rounded,
+            'iconBg': const Color(0xFFE4EFFF),
+            'iconColor': const Color(0xFF0F3E9F),
+          };
+        }).toList();
+        _isLoading = false;
+      });
+      _reverseGeocodeAll();
+    } catch (e) {
+      setState(() {
+        _tugasList = [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _reverseGeocodeAll() async {
+    for (int i = 0; i < _tugasList.length; i++) {
+      final lat = _tugasList[i]['latitude'];
+      final lon = _tugasList[i]['longitude'];
+      if (lat != null && lon != null && lat != 0.0 && lon != 0.0) {
+        try {
+          final address = await LocationService.reverseGeocode(
+            (lat as num).toDouble(),
+            (lon as num).toDouble(),
+          );
+          if (!mounted) return;
+          setState(() {
+            _tugasList[i]['lokasi'] = '$address\n${_tugasList[i]['koordinat']}';
+            _tugasList[i]['lokasi_nama'] = address;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _tugasList[i]['lokasi'] = _tugasList[i]['koordinat'];
+            _tugasList[i]['lokasi_nama'] = _tugasList[i]['koordinat'];
+          });
+        }
+      }
+    }
+  }
+
+  String _mapStatus(String apiStatus) {
+    switch (apiStatus) {
+      case 'pending':
+        return 'DIAJUKAN';
+      case 'verified':
+        return 'DIPROSES';
+      case 'in_progress':
+        return 'DIKERJAKAN';
+      case 'resolved':
+        return 'SELESAI';
+      case 'spam':
+        return 'DITOLAK';
+      default:
+        return 'DIAJUKAN';
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      final months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      return '${date.day} ${months[date.month]} ${date.year} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} WIB';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> tugasList = [
-      {
-        'kategori': 'Jalan',
-        'tanggal': '26 Apr 2026 • 08:45 WIB',
-        'lokasi': 'Kec. Matesih, Kab. Karanganyar\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Karanganyar-Matesih, Kab. Karanganyar',
-        'koordinat': '-7.534587, 110.838543',
-        'status': 'DIPROSES',
-        'deskripsi': 'Kerusakan jalan berlubang di persimpangan utama yang cukup berbahaya bagi pengendara pada malam hari.',
-        'catatan_admin': 'Harap segera ditangani sebelum akhir bulan.',
-        'icon': Icons.add_road_rounded,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-      {
-        'kategori': 'Jalan',
-        'tanggal': '23 Apr 2026 • 12:35 WIB',
-        'lokasi': 'Kec. Jebres, Surakarta\n-6.134357, 112.138223',
-        'lokasi_nama': 'Jl. Mojosongo Raya, Kec. Jebres, Surakarta',
-        'koordinat': '-6.134357, 112.138223',
-        'status': 'DIKERJAKAN',
-        'deskripsi': 'Terdapat lubang besar di tengah persimpangan. Berbahaya bagi pengendara pada malam hari.',
-        'catatan_admin': 'Tolong segera diperbaiki karena tiga hari lagi akan ditinjau oleh pejabat daerah.',
-        'icon': Icons.add_road_rounded,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-      {
-        'kategori': 'Jalan',
-        'tanggal': '20 Apr 2026 • 15:45 WIB',
-        'lokasi': 'Kec. Menteng, Jakarta\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Sudirman, Kec. Menteng, Jakarta',
-        'koordinat': '-7.534587, 110.838543',
-        'status': 'SELESAI',
-        'deskripsi': 'Kerusakan aspal di bahu jalan sudah parah dan berisiko menyebabkan kecelakaan.',
-        'catatan_admin': '',
-        'respon': 'Perbaikan telah selesai dilakukan oleh tim teknis. Aspal sudah diganti dan kondisi jalan kembali normal.',
-        'petugas_nama': 'Tim Teknis Bina Marga',
-        'petugas_waktu': '21 Apr 2026 • 10:00 WIB',
-        'rating': 4,
-        'ulasan': 'Pengerjaan bagus, namun jalur hasil perbaikan tidak merata, jika memungkinkan tolong perbaiki lagi.',
-        'icon': Icons.add_road_rounded,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-    ];
-
-    final filteredList = tugasList.where((item) {
+    final filteredList = _tugasList.where((item) {
       final matchesFilter = _selectedFilter == 'Semua' || item['status'] == _selectedFilter;
       final matchesSearch = _searchQuery.isEmpty ||
           item['kategori'].toString().toLowerCase().contains(_searchQuery) ||
@@ -87,151 +151,175 @@ class _TugasScreenState extends State<TugasScreen> {
     }).toList();
 
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
+      child: RefreshIndicator(
+        onRefresh: _loadAssignedReports,
+        color: AppColors.primaryBlue,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
 
-              Text(
-                'Riwayat Penugasan',
-                style: AppTextStyles.appTitle.copyWith(fontSize: 22),
-              ),
+                Text(
+                  'Riwayat Penugasan',
+                  style: AppTextStyles.appTitle.copyWith(fontSize: 22),
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Search Bar
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEBEBEB),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        style: AppTextStyles.inputText,
-                        onSubmitted: (_) {
-                          setState(() {
-                            _searchQuery = _searchController.text.trim().toLowerCase();
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Cari lokasi atau kerusakan',
-                          hintStyle: AppTextStyles.inputText.copyWith(
-                            color: const Color(0xFF7A7A7A),
+                // Search Bar
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEBEBEB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: AppTextStyles.inputText,
+                          onSubmitted: (_) {
+                            setState(() {
+                              _searchQuery = _searchController.text.trim().toLowerCase();
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Cari lokasi atau kerusakan',
+                            hintStyle: AppTextStyles.inputText.copyWith(
+                              color: const Color(0xFF7A7A7A),
+                            ),
+                            prefixIcon: const Icon(Icons.search_rounded,
+                                color: Color(0xFF7A7A7A), size: 22),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? GestureDetector(
+                                    onTap: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                    child: const Icon(Icons.close_rounded,
+                                        color: Color(0xFF7A7A7A), size: 20),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          prefixIcon: const Icon(Icons.search_rounded,
-                              color: Color(0xFF7A7A7A), size: 22),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? GestureDetector(
-                                  onTap: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                  child: const Icon(Icons.close_rounded,
-                                      color: Color(0xFF7A7A7A), size: 20),
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 16),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _searchQuery = _searchController.text.trim().toLowerCase();
-                      });
-                    },
-                    child: Container(
-                      height: 52,
-                      width: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF003CBF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.search_rounded,
-                          color: Colors.white, size: 24),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Filter Button
-              Container(
-                height: 52,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEBEBEB),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _showFilterModal(context),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.filter_list_rounded,
-                            color: Colors.black87, size: 22),
-                        const SizedBox(width: 10),
-                        Text(
-                          _selectedFilter == 'Semua'
-                              ? 'Filter'
-                              : 'Filter: $_selectedFilter',
-                          style: AppTextStyles.label.copyWith(
-                              fontSize: 15, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              Text(
-                'Laporan Terbaru',
-                style: AppTextStyles.label.copyWith(
-                    fontSize: 18, color: const Color(0xFF333333)),
-              ),
-
-              const SizedBox(height: 14),
-
-              filteredList.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Text(
-                          'Tidak ada tugas untuk status ini.',
-                          style: AppTextStyles.label
-                              .copyWith(color: const Color(0xFF7A7A7A)),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredList.length,
-                      itemBuilder: (context, index) {
-                        return _buildTugasCard(filteredList[index]);
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _searchQuery = _searchController.text.trim().toLowerCase();
+                        });
                       },
+                      child: Container(
+                        height: 52,
+                        width: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF003CBF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.search_rounded,
+                            color: Colors.white, size: 24),
+                      ),
                     ),
+                  ],
+                ),
 
-              const SizedBox(height: 100),
-            ],
+                const SizedBox(height: 12),
+
+                // Filter Button
+                Container(
+                  height: 52,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEBEBEB),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _showFilterModal(context),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.filter_list_rounded,
+                              color: Colors.black87, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            _selectedFilter == 'Semua'
+                                ? 'Filter'
+                                : 'Filter: $_selectedFilter',
+                            style: AppTextStyles.label.copyWith(
+                                fontSize: 15, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                Text(
+                  'Laporan Terbaru',
+                  style: AppTextStyles.label.copyWith(
+                      fontSize: 18, color: const Color(0xFF333333)),
+                ),
+
+                const SizedBox(height: 14),
+
+                if (_isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(color: AppColors.primaryBlue),
+                    ),
+                  )
+                else if (filteredList.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        children: [
+                          Icon(Icons.assignment_outlined,
+                              size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? 'Tidak ditemukan hasil untuk "$_searchQuery"'
+                                : 'Tidak ada tugas untuk status ini.',
+                            style: AppTextStyles.label
+                                .copyWith(color: const Color(0xFF7A7A7A)),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredList.length,
+                    itemBuilder: (context, index) {
+                      return _buildTugasCard(filteredList[index]);
+                    },
+                  ),
+
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
       ),
@@ -285,143 +373,98 @@ class _TugasScreenState extends State<TugasScreen> {
           ],
           border: Border.all(color: const Color(0xFFF0F0F0)),
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: item['iconBg'],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(item['icon'],
-                      color: item['iconColor'], size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: item['iconBg'],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(item['icon'],
+                  color: item['iconColor'], size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Expanded(
+                        child: Text(
+                          item['kategori'],
+                          style: AppTextStyles.label.copyWith(
+                              fontSize: 16, color: Colors.black87),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Text(
-                              item['kategori'],
+                              status,
                               style: AppTextStyles.label.copyWith(
-                                  fontSize: 16, color: Colors.black87),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: badgeBg,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  status,
-                                  style: AppTextStyles.label.copyWith(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: badgeText,
-                                  ),
-                                ),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: badgeText,
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.chevron_right_rounded,
-                                  color: Color(0xFF7A7A7A), size: 20),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today_outlined,
-                              color: Color(0xFF7A7A7A), size: 13),
-                          const SizedBox(width: 5),
-                          Text(
-                            item['tanggal'],
-                            style: AppTextStyles.bodyText.copyWith(
-                                fontSize: 12,
-                                color: const Color(0xFF7A7A7A)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 2),
-                            child: Icon(Icons.location_on_outlined,
-                                color: Color(0xFF7A7A7A), size: 13),
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              item['lokasi'],
-                              style: AppTextStyles.bodyText.copyWith(
-                                  fontSize: 12,
-                                  color: const Color(0xFF7A7A7A),
-                                  height: 1.4),
                             ),
                           ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: Color(0xFF7A7A7A), size: 20),
                         ],
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-
-            // Tampilkan ulasan/rating jika SELESAI
-            if (status == 'SELESAI' && item['ulasan'] != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F8F8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: List.generate(5, (i) {
-                        final rating = item['rating'] ?? 0;
-                        return Icon(
-                          i < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                          size: 20,
-                          color: i < rating
-                              ? const Color(0xFFFFC107)
-                              : const Color(0xFFCCCCCC),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '"${item['ulasan']}"',
-                      style: AppTextStyles.bodyText.copyWith(
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        color: const Color(0xFF555555),
-                        height: 1.4,
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          color: Color(0xFF7A7A7A), size: 13),
+                      const SizedBox(width: 5),
+                      Text(
+                        item['tanggal'],
+                        style: AppTextStyles.bodyText.copyWith(
+                            fontSize: 12,
+                            color: const Color(0xFF7A7A7A)),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.location_on_outlined,
+                            color: Color(0xFF7A7A7A), size: 13),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          item['lokasi'],
+                          style: AppTextStyles.bodyText.copyWith(
+                              fontSize: 12,
+                              color: const Color(0xFF7A7A7A),
+                              height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class DetailPenugasanScreen extends StatefulWidget {
   final Map<String, dynamic> penugasan;
@@ -289,9 +290,33 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  // TODO: ganti Image.network(penugasan['foto_url']) saat API
-                  child: const Icon(Icons.image_outlined,
-                      size: 60, color: Color(0xFF9E9E9E)),
+                  child: widget.penugasan['foto_url'] != null
+                      ? Image.network(
+                          '${ApiService.baseUrl.replaceAll('/api', '')}${widget.penugasan['foto_url']}',
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primaryBlue,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                size: 60,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                            );
+                          },
+                        )
+                      : const Center(
+                          child: Icon(Icons.image_outlined,
+                              size: 60, color: Color(0xFF9E9E9E)),
+                        ),
                 ),
               ),
 
