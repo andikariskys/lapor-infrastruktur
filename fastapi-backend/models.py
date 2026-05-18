@@ -77,6 +77,13 @@ class PasswordChange(SQLModel):
 class PasswordReset(SQLModel):
     new_password: str
 
+class ForgotPasswordRequest(SQLModel):
+    email: str
+
+class ResetPasswordRequest(SQLModel):
+    token: str
+    new_password: str
+
 class Token(SQLModel):
     access_token: str
     token_type: str
