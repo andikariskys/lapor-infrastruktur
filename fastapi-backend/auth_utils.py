@@ -75,3 +75,29 @@ def check_role(allowed_roles: list[models.UserRole]):
             )
         return current_user
     return role_checker
+
+# --- In-Memory Reset Password Token Store ---
+import secrets
+from typing import Optional
+
+reset_tokens = {}
+
+def generate_reset_token(email: str) -> str:
+    token = secrets.token_hex(32)
+    # Token berlaku selama 15 menit
+    expires_at = datetime.now() + timedelta(minutes=15)
+    reset_tokens[token] = {"email": email, "expires_at": expires_at}
+    return token
+
+def verify_reset_token(token: str) -> Optional[str]:
+    token_data = reset_tokens.get(token)
+    if not token_data:
+        return None
+    # Pastikan belum kadaluarsa
+    if datetime.now() > token_data["expires_at"]:
+        reset_tokens.pop(token, None)
+        return None
+    return token_data["email"]
+
+def invalidate_reset_token(token: str):
+    reset_tokens.pop(token, None)

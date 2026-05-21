@@ -117,6 +117,25 @@ def update_me(
     db.refresh(current_user)
     return current_user
 
+@router.patch("/me/change-password", summary="[User] Ganti Password Saya", description="Mengubah password akun yang sedang login saat ini. Harus menyertakan password lama dan password baru.")
+def change_my_password(
+    password_data: models.PasswordChange,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[models.User, Depends(auth_utils.get_current_user)]
+):
+    # Verifikasi password lama
+    if not auth_utils.verify_password(password_data.old_password, current_user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password lama salah"
+        )
+    
+    # Hash password baru
+    current_user.password = auth_utils.get_password_hash(password_data.new_password)
+    db.add(current_user)
+    db.commit()
+    return {"message": "Password Anda berhasil diperbarui"}
+
 @router.patch("/{user_id}/reset-password", summary="[Admin] 4. Reset Password User", description="Admin bisa mereset password pengguna jika pengguna lupa.")
 def reset_user_password(
     user_id: int,
