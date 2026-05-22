@@ -284,33 +284,18 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       children: [
         // Logo
-        Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/logo.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(
-                  Icons.campaign_rounded,
-                  size: 48,
-                  color: AppColors.primaryBlue,
-                );
-              },
-            ),
-          ),
+        Image.asset(
+          'assets/images/logo.png',
+          width: 100,
+          height: 100,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.campaign_rounded,
+              size: 48,
+              color: AppColors.primaryBlue,
+            );
+          },
         ),
         const SizedBox(height: 20),
 
