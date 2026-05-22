@@ -32,17 +32,31 @@ cp .env.example .env
 ```
 
 Buka file `.env` dan lengkapi variabel berikut:
-- `DATABASE_URL`: Koneksi ke MySQL.
+
+### Database Settings
+- `DB_TYPE`: Dialek database (contoh: `mysql+pymysql`).
+- `DB_HOST`: Alamat host database.
+- `DB_USERNAME`: Username database.
+- `DB_PASSWORD`: Password database.
+- `DB_NAME`: Nama database.
+- `DATABASE_URL`: (Opsional) Jika diisi, variabel di atas akan diabaikan.
+
+### Security Settings
 - `SECRET_KEY`: Kunci rahasia untuk JWT.
 - `ALGORITHM`: Algoritma JWT (default: HS256).
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: Durasi login.
 
 ## Menjalankan Aplikasi
 
-Sangat disarankan menjalankan backend di port **8001** agar tidak bentrok dengan frontend Laravel (port 8000):
+Linux/MacOS:
 
 ```bash
-uvicorn main:app --reload --port 8001
+python3 run.py
+```
+Windows:
+
+```bash
+python run.py
 ```
 
 API akan tersedia di `http://127.0.0.1:8001`.

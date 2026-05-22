@@ -5,13 +5,19 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Ambil URL Database dari .env
-DATABASE_URL = os.getenv("DATABASE_URL")
+db_type = os.getenv("DB_TYPE")
+db_host = os.getenv("DB_HOST")
+db_user = os.getenv("DB_USERNAME")
+db_pass = os.getenv("DB_PASSWORD")
+db_name = os.getenv("DB_NAME")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL tidak ditemukan di .env")
+# Pastikan variabel wajib ada (minimal db_host dan db_name)
+if not db_host or not db_name:
+    raise RuntimeError("Konfigurasi Database (DB_HOST, DB_NAME) tidak ditemukan di .env")
+    
+database_url = f"{db_type}://{db_user}:{db_pass}@{db_host}/{db_name}"
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(database_url)
 
 def get_db():
     with Session(engine) as session:

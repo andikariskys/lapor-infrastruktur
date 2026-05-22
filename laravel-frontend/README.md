@@ -78,11 +78,8 @@ Ikuti langkah-langkah berikut untuk menyiapkan proyek secara lokal:
 Aplikasi ini menggunakan arsitektur **Decoupled**, sehingga Anda perlu menjalankan **tiga** server secara bersamaan:
 
 ### 1. Server Backend (FastAPI)
-Buka terminal baru, masuk ke folder backend, dan jalankan server (pastikan menggunakan port **8001** agar tidak bentrok):
-```bash
-cd fastapi-backend
-uvicorn main:app --reload --port 8001
-```
+Buka terminal baru, lalu ikuti panduan pada file [`../fastapi-backend/README.md`](../fastapi-backend/README.md) di bagian **Menjalankan Aplikasi** untuk menjalankan server backend FastAPI.
+
 *(Aplikasi backend akan berjalan di http://localhost:8001)*
 
 ### 2. Server Frontend (Laravel)
