@@ -3,22 +3,22 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Central API service that manages all communication with the FastAPI backend.
-/// Uses Dio with interceptors for automatic token management and error handling.
+/// Servis API utama buat ngatur semua komunikasi ke backend FastAPI.
+/// Pake Dio plus interceptor biar token otomatis keurus dan gampang nanganin error.
 class ApiService {
-  // Change this to your backend URL
+  // Ganti ini sama URL backend
   static const String baseUrl = 'http://localhost:8001/api';
 
-  // Singleton Dio instance with interceptors
+  // Singleton Dio instance yang udah dipasangin interceptor
   static Dio? _dio;
 
-  /// Get the singleton Dio instance, configured with interceptors.
+  /// Ambil instance singleton Dio yang udah disetting interceptornya.
   static Dio get dio {
     _dio ??= _createDio();
     return _dio!;
   }
 
-  /// Creates a new Dio instance with base options and interceptors.
+  /// Bikin instance Dio baru sekalian sama opsi default dan interceptor.
   static Dio _createDio() {
     final dioInstance = Dio(
       BaseOptions(
@@ -33,10 +33,10 @@ class ApiService {
       ),
     );
 
-    // Add auth interceptor for automatic token attachment & error handling
+    // Masukin auth interceptor biar token otomatis nyelip & error kehandle
     dioInstance.interceptors.add(_AuthInterceptor());
 
-    // Add logging interceptor (only in debug mode)
+    // Tambahin logging interceptor (cuma buat mode debug aja)
     assert(() {
       dioInstance.interceptors.add(
         LogInterceptor(
@@ -51,13 +51,13 @@ class ApiService {
     return dioInstance;
   }
 
-  /// Reset Dio instance (useful after logout to clear interceptor state).
+  /// Reset instance Dio (buat ngebersihin state interceptor).
   static void resetDio() {
     _dio?.close();
     _dio = null;
   }
 
-  // ─── Token Management ─────────────────────────────────────────────────────
+  // Ngurusin Token
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -89,7 +89,7 @@ class ApiService {
     return null;
   }
 
-  // ─── Helper: Extract error message from Dio exceptions ─────────────────────
+  // Helper: Ambil pesan error dari exceptionnya Dio
 
   static String _extractError(DioException e, String fallback) {
     if (e.response?.data != null) {
@@ -110,9 +110,9 @@ class ApiService {
     return fallback;
   }
 
-  // ─── Auth ──────────────────────────────────────────────────────────────────
+  // Autentikasi
 
-  /// Register new user (citizen role by default)
+  /// Daftarin user baru (defaultnya jadi warga/pelapor)
   static Future<Map<String, dynamic>> register({
     required String name,
     required String email,
@@ -136,28 +136,23 @@ class ApiService {
     }
   }
 
-  /// Login and receive JWT token
+  /// Buat login dan dapetin token JWT
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      // Login endpoint uses form-urlencoded format (OAuth2 standard)
+      // Endpoint login ini pakenya format form-urlencoded (standar OAuth2)
       final response = await dio.post(
         '/auth/login',
-        data: {
-          'username': email,
-          'password': password,
-        },
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType,
-        ),
+        data: {'username': email, 'password': password},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
       );
 
       final data = response.data as Map<String, dynamic>;
       await saveToken(data['access_token']);
 
-      // Fetch user profile right away
+      // Langsung tarik aja data profil usernya
       final profile = await getMyProfile();
       await saveUserData(profile);
       return profile;
@@ -166,7 +161,7 @@ class ApiService {
     }
   }
 
-  /// Get current user profile
+  /// Ambil data profil user yang lagi login
   static Future<Map<String, dynamic>> getMyProfile() async {
     try {
       final response = await dio.get('/auth/me');
@@ -176,9 +171,9 @@ class ApiService {
     }
   }
 
-  // ─── Reports (Pelapor) ────────────────────────────────────────────────────
+  // Laporan (Buat Pelapor)
 
-  /// Create a new report with image upload
+  /// Bikin laporan baru sekalian upload gambarnya
   static Future<Map<String, dynamic>> createReport({
     required String description,
     required double latitude,
@@ -193,17 +188,14 @@ class ApiService {
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),
         'category_id': categoryId.toString(),
-        'image': MultipartFile.fromBytes(
-          imageBytes,
-          filename: fileName,
-        ),
+        'image': MultipartFile.fromBytes(imageBytes, filename: fileName),
       });
 
       final response = await dio.post(
         '/reports',
         data: formData,
         options: Options(
-          // Let Dio set the correct multipart content-type with boundary
+          // ngatur content type multipartnya biar pas
           contentType: Headers.multipartFormDataContentType,
         ),
       );
@@ -213,7 +205,7 @@ class ApiService {
     }
   }
 
-  /// Get my reports (citizen)
+  /// Ambil list laporan (warga/pelapor)
   static Future<List<dynamic>> getMyReports() async {
     try {
       final response = await dio.get('/reports/my');
@@ -223,7 +215,7 @@ class ApiService {
     }
   }
 
-  /// Get assigned reports (officer)
+  /// Ambil list tugas/laporan buat petugas
   static Future<List<dynamic>> getAssignedReports() async {
     try {
       final response = await dio.get('/reports/assigned');
@@ -233,7 +225,7 @@ class ApiService {
     }
   }
 
-  /// Get report detail
+  /// Ambil detail spesifik laporannya
   static Future<Map<String, dynamic>> getReportDetail(int reportId) async {
     try {
       final response = await dio.get('/reports/$reportId');
@@ -243,7 +235,7 @@ class ApiService {
     }
   }
 
-  /// Update report status (officer/admin)
+  /// Update status laporan (khusus petugas/admin)
   static Future<Map<String, dynamic>> updateReportStatus({
     required int reportId,
     required String status,
@@ -259,7 +251,7 @@ class ApiService {
     }
   }
 
-  /// Update user profile
+  /// Update data profil user
   static Future<Map<String, dynamic>> updateMyProfile({
     String? name,
     String? phone,
@@ -278,38 +270,32 @@ class ApiService {
     }
   }
 
-  /// Change password (using login endpoint as workaround since backend has no direct endpoint)
+  /// Ganti password (ngakalin pake endpoint login soalnya dari backend belum ada endpoint khususnya)
   static Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    // The backend doesn't have a direct change password for citizens
-    // But we can verify old password by trying to login, then update
+    // Backend emang ga punya endpoint khusus ganti password buat warga
+    // Ngakalin verifikasi password lama dengan cara nyoba login, baru deh diupdate
     final userData = await getUserData();
     if (userData == null) throw Exception('Data user tidak ditemukan');
 
-    // Verify old password by attempting login
+    // Verifikasi password lama pake cara nembak endpoint login
     try {
       await dio.post(
         '/auth/login',
-        data: {
-          'username': userData['email'],
-          'password': oldPassword,
-        },
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType,
-        ),
+        data: {'username': userData['email'], 'password': oldPassword},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
       );
     } catch (e) {
       throw Exception('Kata sandi lama salah');
     }
 
-    // Note: The backend doesn't have a user-facing password change endpoint.
-    // For now, we simulate success. In production, add a /api/auth/change-password endpoint.
-    // TODO: Implement backend endpoint for password change
+    // Catatan: Backend belum nyediain endpoint buat ganti password user.
+    // TODO: Bikin endpoint di backend buat fitur ganti password
   }
 
-  /// Create feedback for a report
+  /// Ngasih feedback/ulasan buat suatu laporan
   static Future<Map<String, dynamic>> createFeedback({
     required int reportId,
     required String content,
@@ -318,10 +304,7 @@ class ApiService {
     try {
       final response = await dio.post(
         '/reports/$reportId/feedback',
-        data: {
-          'content': content,
-          'rating': rating,
-        },
+        data: {'content': content, 'rating': rating},
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -329,22 +312,18 @@ class ApiService {
     }
   }
 
-  /// Add work progress (officer)
+  /// Nambahin update progres kerjaan (buat petugas)
   static Future<Map<String, dynamic>> addWorkProgress({
     required int reportId,
     required String note,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'note': note,
-      });
+      final formData = FormData.fromMap({'note': note});
 
       final response = await dio.post(
         '/reports/$reportId/progress',
         data: formData,
-        options: Options(
-          contentType: Headers.multipartFormDataContentType,
-        ),
+        options: Options(contentType: Headers.multipartFormDataContentType),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -352,7 +331,7 @@ class ApiService {
     }
   }
 
-  /// Get categories
+  /// Ambil list kategori laporan
   static Future<List<dynamic>> getCategories() async {
     try {
       final response = await dio.get('/categories');
@@ -363,23 +342,23 @@ class ApiService {
   }
 }
 
-// ─── Auth Interceptor ──────────────────────────────────────────────────────
+// Auth Interceptor
 
-/// Interceptor that automatically attaches the JWT token to requests
-/// and handles 401 unauthorized responses.
+/// Interceptor otomatis nyelipin token JWT tiap request
+/// Ngurusi respon belum login / unauthorized (401).
 class _AuthInterceptor extends Interceptor {
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Skip token for auth endpoints (login/register)
+    // Gapake token kalau ke endpoint login atau register
     final path = options.path;
     if (path.contains('/auth/login') || path.contains('/auth/register')) {
       return handler.next(options);
     }
 
-    // Attach token if available
+    // Selipin token
     final token = await ApiService.getToken();
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -389,15 +368,12 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(
-    DioException err,
-    ErrorInterceptorHandler handler,
-  ) async {
-    // Handle 401 Unauthorized — clear token
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Kalau dapet 401 Unauthorized — hapus aja tokennya
     if (err.response?.statusCode == 401) {
       await ApiService.clearToken();
       ApiService.resetDio();
-      // Optionally: navigate to login screen via a global navigator key
+      // Opsional: lempar user balik ke halaman login lewat global navigator key
     }
 
     return handler.next(err);

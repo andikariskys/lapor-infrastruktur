@@ -94,8 +94,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
       return;
     }
-    if (phone.length < 10) {
-      _showSnackBar('Nomor telepon tidak valid.', isError: true);
+    if (phone.length < 10 || phone.length > 13) {
+      _showSnackBar('Nomor telepon harus 10-13 digit.', isError: true);
       return;
     }
 
@@ -232,11 +232,15 @@ class _RegisterScreenState extends State<RegisterScreen>
           const SizedBox(height: 8),
           _buildInputField(
             controller: _phoneController,
-            hintText: '0881-2345-6789',
+            hintText: '088123456789',
             icon: Icons.phone_outlined,
             isFocused: _phoneFocused,
             onFocusChange: (v) => setState(() => _phoneFocused = v),
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(13),
+            ],
           ),
 
           const SizedBox(height: 20),
@@ -276,6 +280,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     required bool isFocused,
     required ValueChanged<bool> onFocusChange,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Focus(
       onFocusChange: onFocusChange,
@@ -292,6 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
             hintText: hintText,
