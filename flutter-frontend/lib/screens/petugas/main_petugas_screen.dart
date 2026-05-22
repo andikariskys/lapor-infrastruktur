@@ -77,6 +77,9 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
                   namaUser: widget.namaUser,
                   jabatan: widget.jabatan,
                   instansi: widget.instansi,
+                  onViewAllTugas: () {
+                    setState(() => _selectedNavIndex = 1);
+                  },
                 ),
                 const TugasScreen(),
                 const ProfilScreen(),

@@ -4,6 +4,7 @@ import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/buat_laporan_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/riwayat_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/profil_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaUser;
@@ -21,16 +22,16 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Data dummy
+  // Data — loaded dynamically
   final String _lokasi = 'Jl. Karanganyar-Matesih';
   final String _koordinat = '-7.534587, 110.838543';
-  final int _limitTerpakai = 2;
+  int _limitTerpakai = 0;
   final int _limitTotal = 3;
-  final int _totalLaporan = 124;
-  final int _diajukan = 8;
-  final int _ditolak = 3;
-  final int _diproses = 8;
-  final int _selesai = 3;
+  int _totalLaporan = 0;
+  int _diajukan = 0;
+  int _ditolak = 0;
+  int _diproses = 0;
+  int _selesai = 0;
 
   @override
   void initState() {
@@ -49,6 +50,57 @@ class _HomeScreenState extends State<HomeScreen>
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
     _animController.forward();
+    _loadReportStats();
+  }
+
+  Future<void> _loadReportStats() async {
+    try {
+      final reports = await ApiService.getMyReports();
+      if (!mounted) return;
+      int diajukan = 0, ditolak = 0, diproses = 0, selesai = 0;
+      for (final r in reports) {
+        final status = (r as Map<String, dynamic>)['status'] ?? 'pending';
+        switch (status) {
+          case 'pending':
+            diajukan++;
+            break;
+          case 'spam':
+            ditolak++;
+            break;
+          case 'verified':
+          case 'in_progress':
+            diproses++;
+            break;
+          case 'resolved':
+            selesai++;
+            break;
+        }
+      }
+      // Count today's reports for limit
+      final now = DateTime.now();
+      int todayCount = 0;
+      for (final r in reports) {
+        final createdAt = (r as Map<String, dynamic>)['created_at'];
+        if (createdAt != null) {
+          try {
+            final date = DateTime.parse(createdAt);
+            if (date.year == now.year && date.month == now.month && date.day == now.day) {
+              todayCount++;
+            }
+          } catch (_) {}
+        }
+      }
+      setState(() {
+        _totalLaporan = reports.length;
+        _diajukan = diajukan;
+        _ditolak = ditolak;
+        _diproses = diproses;
+        _selesai = selesai;
+        _limitTerpakai = todayCount;
+      });
+    } catch (_) {
+      // Keep defaults if API fails
+    }
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -63,26 +64,64 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : AppColors.primaryBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   void _handleRegister() async {
+    final nama = _namaController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // ── Validation ──────────────────────────────────────────────────────────
+    if (nama.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+      _showSnackBar('Harap isi semua field yang tersedia.', isError: true);
+      return;
+    }
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email)) {
+      _showSnackBar('Format email tidak valid.', isError: true);
+      return;
+    }
+    if (password.length < 6) {
+      _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
+      return;
+    }
+    if (phone.length < 10) {
+      _showSnackBar('Nomor telepon tidak valid.', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Akun berhasil didaftarkan!',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: AppColors.primaryBlue,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+
+    try {
+      await ApiService.register(
+        name: nama,
+        email: email,
+        phone: phone,
+        password: password,
       );
+
+      if (!mounted) return;
+
+      _showSnackBar('Akun berhasil didaftarkan! Silakan login.');
       // Kembali ke halaman login setelah daftar berhasil
       Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class KeamananScreen extends StatefulWidget {
   const KeamananScreen({super.key});
@@ -13,6 +14,10 @@ class _KeamananScreenState extends State<KeamananScreen> {
   final _oldPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscureOld = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
@@ -22,17 +27,59 @@ class _KeamananScreenState extends State<KeamananScreen> {
     super.dispose();
   }
 
-  void _handleSimpanPerubahan() {
-    // Tampilkan snackbar sukses
+  void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Kata sandi berhasil diubah.'),
-        backgroundColor: Colors.green,
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
-    Navigator.pop(context);
+  }
+
+  void _handleSimpanPerubahan() async {
+    final oldPass = _oldPasswordController.text.trim();
+    final newPass = _newPasswordController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
+
+    // ── Validation ──────────────────────────────────────────────────────────
+    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
+      _showSnackBar('Harap isi semua field.', isError: true);
+      return;
+    }
+    if (newPass.length < 6) {
+      _showSnackBar('Kata sandi baru minimal 6 karakter.', isError: true);
+      return;
+    }
+    if (newPass != confirmPass) {
+      _showSnackBar('Konfirmasi kata sandi tidak cocok.', isError: true);
+      return;
+    }
+    if (oldPass == newPass) {
+      _showSnackBar('Kata sandi baru harus berbeda dari yang lama.', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ApiService.changePassword(
+        oldPassword: oldPass,
+        newPassword: newPass,
+      );
+      if (!mounted) return;
+      _showSnackBar('Kata sandi berhasil diubah.');
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -69,7 +116,7 @@ class _KeamananScreenState extends State<KeamananScreen> {
                 
                 const SizedBox(height: 8),
                 
-                // Subjudul (Memperbaiki typo "bar" menjadi "baru" dari mockup)
+                // Subjudul
                 Text(
                   'Silakan masukkan kata sandi lama Anda dan buat kata sandi baru yang kuat untuk melindungi akses akun Anda.',
                   style: AppTextStyles.bodyText.copyWith(
@@ -82,16 +129,30 @@ class _KeamananScreenState extends State<KeamananScreen> {
                 const SizedBox(height: 32),
 
                 // Form Kata Sandi Lama
-                _buildPasswordField('Kata Sandi Lama', _oldPasswordController),
+                _buildPasswordField(
+                  'Kata Sandi Lama',
+                  _oldPasswordController,
+                  _obscureOld,
+                  () => setState(() => _obscureOld = !_obscureOld),
+                ),
                 const SizedBox(height: 20),
 
                 // Form Kata Sandi Baru
-                // (Di mockup tertulis "Kata Sandi Lama" lagi akibat copas, disesuaikan agar logis)
-                _buildPasswordField('Kata Sandi Baru', _newPasswordController),
+                _buildPasswordField(
+                  'Kata Sandi Baru',
+                  _newPasswordController,
+                  _obscureNew,
+                  () => setState(() => _obscureNew = !_obscureNew),
+                ),
                 const SizedBox(height: 20),
 
                 // Form Konfirmasi Kata Sandi Baru
-                _buildPasswordField('Konfirmasi Kata Sandi', _confirmPasswordController),
+                _buildPasswordField(
+                  'Konfirmasi Kata Sandi',
+                  _confirmPasswordController,
+                  _obscureConfirm,
+                  () => setState(() => _obscureConfirm = !_obscureConfirm),
+                ),
                 const SizedBox(height: 40),
 
                 // Tombol Simpan
@@ -135,7 +196,12 @@ class _KeamananScreenState extends State<KeamananScreen> {
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController controller) {
+  Widget _buildPasswordField(
+    String label,
+    TextEditingController controller,
+    bool obscure,
+    VoidCallback toggleObscure,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,18 +217,28 @@ class _KeamananScreenState extends State<KeamananScreen> {
         Container(
           height: 54,
           decoration: BoxDecoration(
-            color: const Color(0xFFE2E2E2), // Light grey background like mockup
+            color: const Color(0xFFE2E2E2),
             borderRadius: BorderRadius.circular(14),
           ),
           child: TextField(
             controller: controller,
-            obscureText: true,
+            obscureText: obscure,
             style: AppTextStyles.inputText,
             decoration: InputDecoration(
               hintText: '**********',
               hintStyle: AppTextStyles.inputText.copyWith(
                 color: const Color(0xFF9E9E9E),
                 letterSpacing: 2.0,
+              ),
+              suffixIcon: GestureDetector(
+                onTap: toggleObscure,
+                child: Icon(
+                  obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: const Color(0xFF9E9E9E),
+                  size: 20,
+                ),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -180,7 +256,7 @@ class _KeamananScreenState extends State<KeamananScreen> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: const Color(0xFF0044C4), // Solid blue from mockup
+          color: const Color(0xFF0044C4),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF0044C4).withValues(alpha: 0.3),
@@ -190,7 +266,7 @@ class _KeamananScreenState extends State<KeamananScreen> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: _handleSimpanPerubahan,
+          onPressed: _isLoading ? null : _handleSimpanPerubahan,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
@@ -198,12 +274,19 @@ class _KeamananScreenState extends State<KeamananScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          child: Text(
-            'Simpan Perubahan',
-            style: AppTextStyles.buttonText.copyWith(
-              fontSize: 16,
-            ),
-          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(
+                  'Simpan Perubahan',
+                  style: AppTextStyles.buttonText.copyWith(fontSize: 16),
+                ),
         ),
       ),
     );

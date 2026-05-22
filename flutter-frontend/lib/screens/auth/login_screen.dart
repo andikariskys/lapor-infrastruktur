@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/auth/register_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/home_screen.dart';
 import 'package:lapor_infrastruktur/screens/petugas/main_petugas_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,6 +48,23 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
     _animationController.forward();
+    _checkExistingSession();
+  }
+
+  /// Check if user is already logged in
+  Future<void> _checkExistingSession() async {
+    final token = await ApiService.getToken();
+    if (token != null && mounted) {
+      try {
+        final userData = await ApiService.getMyProfile();
+        await ApiService.saveUserData(userData);
+        if (!mounted) return;
+        _navigateByRole(userData);
+      } catch (_) {
+        // Token expired or invalid, stay on login
+        await ApiService.clearToken();
+      }
+    }
   }
 
   @override
@@ -57,26 +76,54 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // ── Form Validation ─────────────────────────────────────────────────────
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar('Harap isi email dan kata sandi.', isError: true);
+      return;
+    }
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email)) {
+      _showSnackBar('Format email tidak valid.', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
 
-    if (!mounted) return;
+    try {
+      final userData = await ApiService.login(
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      _navigateByRole(userData);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar(
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
-    // ── Role-based routing (dummy) ──────────────────────────────────────────
-    // TODO: Ganti dengan pengecekan role dari API response
-    // Contoh: final role = apiResponse['role'];
-    final email = _emailController.text.trim().toLowerCase();
-    final isPetugas = email.contains('petugas');
+  void _navigateByRole(Map<String, dynamic> userData) {
+    final role = userData['role'] ?? 'citizen';
+    final nama = userData['name'] ?? 'User';
 
-    if (isPetugas) {
+    if (role == 'officer') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const MainPetugasScreen(
-            namaUser: 'Andika Risky Septiawan',
-            jabatan: 'Petugas Bina Marga',
-            instansi: 'DPUPR Kabupaten Karanganyar',
+          builder: (context) => MainPetugasScreen(
+            namaUser: nama,
+            jabatan: userData['institution']?['name'] != null
+                ? 'Petugas ${userData['institution']['name']}'
+                : 'Petugas Lapangan',
+            instansi:
+                userData['institution']?['name'] ?? 'Instansi belum diatur',
           ),
         ),
       );
@@ -84,11 +131,104 @@ class _LoginScreenState extends State<LoginScreen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            namaUser: email.isEmpty ? 'Andika Risky Septiawan' : email,
-          ),
+          builder: (context) => HomeScreen(namaUser: nama),
         ),
       );
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : AppColors.primaryBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _handleForgotPassword() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF0E6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: Color(0xFFE8720C),
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Lupa Kata Sandi?',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Silakan hubungi admin untuk melakukan reset kata sandi akun Anda.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.appSubtitle.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child:
+                      Text('Mengerti', style: AppTextStyles.buttonText),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleContactAdmin() async {
+    // Try to open WhatsApp or email
+    final Uri whatsappUri = Uri.parse('https://wa.me/6281234567890?text=Halo%20Admin%2C%20saya%20butuh%20bantuan%20teknis%20untuk%20aplikasi%20Lapor%20Infrastruktur');
+    final Uri emailUri = Uri.parse('mailto:admin@laporinfrastruktur.id?subject=Bantuan%20Teknis&body=Halo%20Admin%2C%20saya%20butuh%20bantuan%20teknis.');
+
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          _showSnackBar('Hubungi admin di: admin@laporinfrastruktur.id');
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('Hubungi admin di: admin@laporinfrastruktur.id');
+      }
     }
   }
 
@@ -228,7 +368,7 @@ class _LoginScreenState extends State<LoginScreen>
             children: [
               Text('Kata Sandi', style: AppTextStyles.label),
               GestureDetector(
-                onTap: () {},
+                onTap: _handleForgotPassword,
                 child: Text(
                   'Lupa Kata Sandi?',
                   style: AppTextStyles.forgotPassword,
@@ -290,6 +430,7 @@ class _LoginScreenState extends State<LoginScreen>
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           style: AppTextStyles.inputText,
+          onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
             hintText: 'andikariskys@gmail.com',
             hintStyle: AppTextStyles.inputText.copyWith(
@@ -332,6 +473,7 @@ class _LoginScreenState extends State<LoginScreen>
           controller: _passwordController,
           obscureText: _obscurePassword,
           style: AppTextStyles.inputText,
+          onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
             hintText: '••••••••••',
             hintStyle: AppTextStyles.inputText.copyWith(
@@ -430,7 +572,7 @@ class _LoginScreenState extends State<LoginScreen>
         Text('Butuh bantuan teknis?', style: AppTextStyles.bodyText),
         const SizedBox(height: 10),
         GestureDetector(
-          onTap: () {},
+          onTap: _handleContactAdmin,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(

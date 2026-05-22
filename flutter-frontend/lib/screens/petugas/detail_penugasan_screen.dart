@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 
 class DetailPenugasanScreen extends StatefulWidget {
@@ -378,8 +379,29 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
                       width: double.infinity,
                       height: 44,
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: buka Google Maps dengan koordinat
+                        onPressed: () async {
+                          final coords = koordinat.split(',');
+                          if (coords.length == 2) {
+                            final lat = coords[0].trim();
+                            final lng = coords[1].trim();
+                            final Uri mapsUri = Uri.parse(
+                              'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                            );
+                            try {
+                              await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lokasi: $koordinat'),
+                                    backgroundColor: AppColors.primaryBlue,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                              }
+                            }
+                          }
                         },
                         icon: const Icon(Icons.map_outlined,
                             color: AppColors.primaryBlue, size: 18),
