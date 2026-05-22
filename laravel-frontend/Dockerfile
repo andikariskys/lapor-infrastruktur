@@ -25,6 +25,7 @@ COPY . .
 # Install dependencies
 RUN composer install
 RUN npm install
+RUN npm run build
 
 # Permission
 RUN chmod -R 777 storage bootstrap/cache
@@ -34,4 +35,4 @@ EXPOSE 8000
 EXPOSE 5173
 
 # Run Laravel + Vite
-CMD sh -c "php artisan serve --host=0.0.0.0 --port=8000 & npm run dev -- --host 0.0.0.0"
+CMD sh -c "php artisan serve --host=0.0.0.0 --port=8000"
