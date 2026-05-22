@@ -663,6 +663,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   // ─── DESKRIPSI FIELD ─────────────────────────────────────────────────────
   Widget _buildDeskripsiField() {
     return Focus(
+      canRequestFocus: false,
       onFocusChange: (v) => setState(() => _deskrpsiFocused = v),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -679,6 +680,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
         child: TextField(
           controller: _deskripsiController,
           maxLines: 5,
+          textInputAction: TextInputAction.newline,
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
             hintText: 'Jelaskan masalah infrastruktur secara detail...',

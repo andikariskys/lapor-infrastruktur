@@ -117,16 +117,23 @@ def update_me(
     db.refresh(current_user)
     return current_user
 
-@router.patch("/{user_id}/reset-password", summary="[Admin] 4. Reset Password User", description="Admin bisa mereset password pengguna jika pengguna lupa.")
+@router.patch("/{user_id}/reset-password", summary="[Admin/User] 4. Reset Password User", description="Admin bisa mereset password pengguna, atau pengguna bisa mengganti passwordnya sendiri.")
 def reset_user_password(
     user_id: int,
     reset_data: models.PasswordReset,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.admin]))]
+    current_user: Annotated[models.User, Depends(auth_utils.get_current_user)]
 ):
     user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
+        
+    # Cek izin: Harus admin ATAU user itu sendiri
+    if current_user.role != models.UserRole.admin and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Anda tidak memiliki izin untuk mengubah kata sandi akun ini."
+        )
     
     user.password = auth_utils.get_password_hash(reset_data.new_password)
     db.add(user)

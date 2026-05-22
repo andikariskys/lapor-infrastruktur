@@ -281,9 +281,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     required ValueChanged<bool> onFocusChange,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
+    TextInputAction textInputAction = TextInputAction.next,
   }) {
     return Focus(
+      canRequestFocus: false,
       onFocusChange: onFocusChange,
+
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -297,6 +300,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: TextField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
           inputFormatters: inputFormatters,
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
@@ -322,6 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Widget _buildPasswordField() {
     return Focus(
+      canRequestFocus: false,
       onFocusChange: (hasFocus) {
         setState(() => _passwordFocused = hasFocus);
       },
@@ -340,6 +345,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: TextField(
           controller: _passwordController,
           obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
+
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
             hintText: '••••••••••',

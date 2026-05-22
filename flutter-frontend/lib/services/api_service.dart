@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Pake Dio plus interceptor biar token otomatis keurus dan gampang nanganin error.
 class ApiService {
   // Ganti ini sama URL backend
-  static const String baseUrl = 'http://localhost:8001/api';
+  static const String baseUrl = 'https://lapor-api.ars-projects.my.id/api';
 
   // Singleton Dio instance yang udah dipasangin interceptor
   static Dio? _dio;
@@ -194,10 +194,6 @@ class ApiService {
       final response = await dio.post(
         '/reports',
         data: formData,
-        options: Options(
-          // ngatur content type multipartnya biar pas
-          contentType: Headers.multipartFormDataContentType,
-        ),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -270,17 +266,16 @@ class ApiService {
     }
   }
 
-  /// Ganti password (ngakalin pake endpoint login soalnya dari backend belum ada endpoint khususnya)
+  /// Ganti password dengan memverifikasi password lama via login, lalu memanggil endpoint reset-password
   static Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    // Backend emang ga punya endpoint khusus ganti password buat warga
-    // Ngakalin verifikasi password lama dengan cara nyoba login, baru deh diupdate
+    // Backend belum punya endpoint khusus ganti password untuk warga (yang memverifikasi old_password)
+    // Jadi kita akali: verifikasi password lama dengan cara nyoba login
     final userData = await getUserData();
     if (userData == null) throw Exception('Data user tidak ditemukan');
 
-    // Verifikasi password lama pake cara nembak endpoint login
     try {
       await dio.post(
         '/auth/login',
@@ -291,8 +286,16 @@ class ApiService {
       throw Exception('Kata sandi lama salah');
     }
 
-    // Catatan: Backend belum nyediain endpoint buat ganti password user.
-    // TODO: Bikin endpoint di backend buat fitur ganti password
+    // Setelah terverifikasi, panggil endpoint reset password
+    try {
+      final userId = userData['id'];
+      await dio.patch(
+        '/users/$userId/reset-password',
+        data: {'new_password': newPassword},
+      );
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengubah kata sandi'));
+    }
   }
 
   /// Ngasih feedback/ulasan buat suatu laporan
@@ -323,7 +326,6 @@ class ApiService {
       final response = await dio.post(
         '/reports/$reportId/progress',
         data: formData,
-        options: Options(contentType: Headers.multipartFormDataContentType),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {

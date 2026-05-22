@@ -24,6 +24,7 @@ class MainPetugasScreen extends StatefulWidget {
 class _MainPetugasScreenState extends State<MainPetugasScreen>
     with SingleTickerProviderStateMixin {
   int _selectedNavIndex = 0;
+  late PageController _pageController;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -32,6 +33,7 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selectedNavIndex);
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -50,6 +52,7 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
 
   @override
   void dispose() {
+    _pageController.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -70,8 +73,11 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
         child: SlideTransition(
           position: _slideAnim,
           child: SafeArea(
-            child: IndexedStack(
-              index: _selectedNavIndex,
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() => _selectedNavIndex = index);
+              },
               children: [
                 HomePetugasScreen(
                   namaUser: widget.namaUser,
@@ -79,6 +85,11 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
                   instansi: widget.instansi,
                   onViewAllTugas: () {
                     setState(() => _selectedNavIndex = 1);
+                    _pageController.animateToPage(
+                      1,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
                   },
                 ),
                 const TugasScreen(),
@@ -109,7 +120,14 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: BottomNavigationBar(
           currentIndex: _selectedNavIndex,
-          onTap: (index) => setState(() => _selectedNavIndex = index),
+          onTap: (index) {
+            setState(() => _selectedNavIndex = index);
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
           backgroundColor: Colors.white,
           selectedItemColor: AppColors.primaryBlue,
           unselectedItemColor: AppColors.textGrey,

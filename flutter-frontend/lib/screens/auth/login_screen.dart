@@ -411,6 +411,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildEmailField() {
     return Focus(
+      canRequestFocus: false,
       onFocusChange: (hasFocus) {
         setState(() => _emailFocused = hasFocus);
       },
@@ -429,6 +430,8 @@ class _LoginScreenState extends State<LoginScreen>
         child: TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+
           style: AppTextStyles.inputText,
           onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
@@ -454,6 +457,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildPasswordField() {
     return Focus(
+      canRequestFocus: false,
       onFocusChange: (hasFocus) {
         setState(() => _passwordFocused = hasFocus);
       },
@@ -472,6 +476,8 @@ class _LoginScreenState extends State<LoginScreen>
         child: TextField(
           controller: _passwordController,
           obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
+
           style: AppTextStyles.inputText,
           onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
