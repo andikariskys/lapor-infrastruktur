@@ -67,6 +67,40 @@ async def create_officer(
     db.refresh(new_officer)
     return new_officer
 
+@router.patch("/me", response_model=models.UserRead, summary="[User] Update Profil Saya", description="Mengubah data profil pengguna yang sedang login saat ini (nama, email, nomor telepon, foto profil).")
+async def update_me(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[models.User, Depends(auth_utils.get_current_user)],
+    name: Annotated[Optional[str], Form()] = None,
+    email: Annotated[Optional[str], Form()] = None,
+    phone: Annotated[Optional[str], Form()] = None,
+    image: Annotated[Optional[UploadFile], File()] = None
+):
+    if email and email != current_user.email:
+        # Cek apakah email sudah terdaftar untuk user lain
+        existing_user = db.exec(select(models.User).where(models.User.email == email)).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+        current_user.email = email
+
+    if name:
+        current_user.name = name
+    if phone:
+        current_user.phone = phone
+
+    if image:
+        file_ext = image.filename.split(".")[-1]
+        file_name = f"{uuid.uuid4()}.{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, file_name)
+        with open(file_path, "wb") as f:
+            f.write(await image.read())
+        current_user.profile_photo = f"/uploads/{file_name}"
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
 @router.patch("/{user_id}", response_model=models.UserRead, summary="[Admin] 3. Update Data User", description="Mengubah informasi profil pengguna lain (khusus Admin).")
 async def admin_update_user(
     user_id: int,
@@ -101,21 +135,6 @@ async def admin_update_user(
     db.commit()
     db.refresh(user)
     return user
-
-@router.patch("/me", response_model=models.UserRead)
-def update_me(
-    user_update: models.UserUpdate,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(auth_utils.get_current_user)]
-):
-    if user_update.name: current_user.name = user_update.name
-    if user_update.phone: current_user.phone = user_update.phone
-    if user_update.profile_photo: current_user.profile_photo = user_update.profile_photo
-    
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
-    return current_user
 
 @router.patch("/me/change-password", summary="[User] Ganti Password Saya", description="Mengubah password akun yang sedang login saat ini. Harus menyertakan password lama dan password baru.")
 def change_my_password(
