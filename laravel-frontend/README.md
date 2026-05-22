@@ -61,6 +61,7 @@ Ikuti langkah-langkah berikut untuk menyiapkan proyek secara lokal:
     
     # Konfigurasi API FastAPI
     API_URL=http://localhost:8000/api
+    BACKEND_URL=http://localhost:8000
     ```
 
 6.  **Generate Application Key:**
