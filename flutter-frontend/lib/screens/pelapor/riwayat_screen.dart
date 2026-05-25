@@ -44,6 +44,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     setState(() => _isLoading = true);
     try {
       final reports = await ApiService.getMyReports();
+      if (!mounted) return;
       setState(() {
         _laporanList = reports.map((r) {
           final report = r as Map<String, dynamic>;
@@ -75,6 +76,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       _reverseGeocodeAll();
     } catch (_) {
       // Show empty state with error
+      if (!mounted) return;
       setState(() {
         _laporanList = [];
         _isLoading = false;
@@ -313,25 +315,32 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _showFilterModal(context),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.filter_list_rounded,
-                            color: Colors.black87,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            _selectedFilter == 'Semua'
-                                ? 'Filter'
-                                : 'Filter: $_selectedFilter',
-                            style: AppTextStyles.label.copyWith(
-                              fontSize: 16,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.filter_list_rounded,
                               color: Colors.black87,
+                              size: 22,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _selectedFilter == 'Semua'
+                                    ? 'Filter Kategori Laporan'
+                                    : 'Kategori: $_selectedFilter',
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -457,7 +466,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon Thumbnail
+          // Icon Thumbnail or Report Image
           Container(
             width: 56,
             height: 56,
@@ -465,11 +474,41 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               color: item['iconBg'] ?? const Color(0xFFE4EFFF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              item['icon'] ?? Icons.report_problem_rounded,
-              color: item['iconColor'] ?? const Color(0xFF0F3E9F),
-              size: 28,
-            ),
+            child: item['foto_url'] != null && item['foto_url'].toString().isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      ApiService.getFullImageUrl(item['foto_url']),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(
+                            item['icon'] ?? Icons.report_problem_rounded,
+                            color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                            size: 28,
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F3E9F)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : Icon(
+                    item['icon'] ?? Icons.report_problem_rounded,
+                    color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                    size: 28,
+                  ),
           ),
           const SizedBox(width: 16),
 
@@ -621,14 +660,17 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          filter,
-                          style: AppTextStyles.label.copyWith(
-                            fontSize: 16,
-                            color: isSelected ? const Color(0xFF003CBF) : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        Expanded(
+                          child: Text(
+                            filter,
+                            style: AppTextStyles.label.copyWith(
+                              fontSize: 16,
+                              color: isSelected ? const Color(0xFF003CBF) : Colors.black87,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         if (isSelected)
                           const Icon(Icons.check_circle_rounded, color: Color(0xFF003CBF)),
                       ],

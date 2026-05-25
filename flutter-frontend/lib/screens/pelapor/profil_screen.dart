@@ -222,15 +222,22 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ],
                   border: Border.all(color: Colors.white, width: 4),
                 ),
-                child: const CircleAvatar(
-                  radius: 46,
-                  backgroundColor: Color(0xFFE8ECF5),
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: 60,
-                    color: Color(0xFFCDD3E0),
-                  ),
-                ),
+                child: _userData?['profile_photo'] != null && _userData!['profile_photo'].toString().isNotEmpty
+                    ? CircleAvatar(
+                        radius: 46,
+                        backgroundImage: NetworkImage(
+                          ApiService.getFullImageUrl(_userData!['profile_photo']),
+                        ),
+                      )
+                    : const CircleAvatar(
+                        radius: 46,
+                        backgroundColor: Color(0xFFE8ECF5),
+                        child: Icon(
+                          Icons.person_rounded,
+                          size: 60,
+                          color: Color(0xFFCDD3E0),
+                        ),
+                      ),
               ),
 
               const SizedBox(height: 20),

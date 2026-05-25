@@ -1,4 +1,1 @@
-/// Stub implementation for non-web platforms
-Future<Map<String, double>> getCurrentPosition() async {
-  throw UnsupportedError('Geolocation hanya didukung di platform web.');
-}
+// Unused: geolocation is now handled directly by the cross-platform geolocator library.

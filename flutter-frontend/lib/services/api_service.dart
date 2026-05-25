@@ -247,23 +247,45 @@ class ApiService {
     }
   }
 
-  /// Update data profil user
+  /// Update data profil user (menggunakan multipart/form-data sesuai backend)
   static Future<Map<String, dynamic>> updateMyProfile({
     String? name,
+    String? email,
     String? phone,
+    Uint8List? imageBytes,
+    String? imageFileName,
   }) async {
     try {
-      final body = <String, dynamic>{};
-      if (name != null) body['name'] = name;
-      if (phone != null) body['phone'] = phone;
+      final formMap = <String, dynamic>{};
+      if (name != null && name.isNotEmpty) formMap['name'] = name;
+      if (email != null && email.isNotEmpty) formMap['email'] = email;
+      if (phone != null && phone.isNotEmpty) formMap['phone'] = phone;
+      if (imageBytes != null && imageFileName != null) {
+        formMap['image'] = MultipartFile.fromBytes(
+          imageBytes,
+          filename: imageFileName,
+        );
+      }
 
-      final response = await dio.patch('/users/me', data: body);
+      final formData = FormData.fromMap(formMap);
+      final response = await dio.patch('/users/me', data: formData);
       final data = response.data as Map<String, dynamic>;
       await saveUserData(data);
       return data;
     } on DioException catch (e) {
       throw Exception(_extractError(e, 'Gagal memperbarui profil'));
     }
+  }
+
+  /// Helper untuk mendapatkan full URL dari path foto profil
+  static String getFullImageUrl(String path) {
+    // Jika path sudah berupa full URL, langsung return
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // Kalau path dimulai dengan /uploads, ambil base URL tanpa /api
+    const baseHost = 'https://lapor-api.ars-projects.my.id';
+    return '$baseHost$path';
   }
 
   /// Ganti password dengan memverifikasi password lama via login, lalu memanggil endpoint reset-password
