@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/detail_laporan_screen.dart';
 import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class RiwayatScreen extends StatefulWidget {
   const RiwayatScreen({super.key});
@@ -48,14 +49,18 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           final report = r as Map<String, dynamic>;
           final status = _mapStatus(report['status'] ?? 'pending');
           final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          final lat = report['latitude'] ?? 0.0;
+          final lon = report['longitude'] ?? 0.0;
 
           return {
             'id': report['id'],
             'kategori': kategoriName,
             'tanggal': _formatDate(report['created_at']),
-            'lokasi': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
-            'lokasi_nama': kategoriName,
-            'koordinat': '${report['latitude'] ?? 0}, ${report['longitude'] ?? 0}',
+            'lokasi': 'Memuat lokasi...',
+            'lokasi_nama': 'Memuat...',
+            'koordinat': '${(lat as num).toStringAsFixed(6)}, ${(lon as num).toStringAsFixed(6)}',
+            'latitude': lat,
+            'longitude': lon,
             'deskripsi': report['description'] ?? '-',
             'status': status,
             'foto_url': report['photo_url'],
@@ -66,12 +71,40 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         }).toList();
         _isLoading = false;
       });
+      // Reverse geocode all report locations in background
+      _reverseGeocodeAll();
     } catch (_) {
-      // Fallback to dummy data if API fails
+      // Show empty state with error
       setState(() {
-        _laporanList = _getDummyData();
+        _laporanList = [];
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _reverseGeocodeAll() async {
+    for (int i = 0; i < _laporanList.length; i++) {
+      final lat = _laporanList[i]['latitude'];
+      final lon = _laporanList[i]['longitude'];
+      if (lat != null && lon != null && lat != 0.0 && lon != 0.0) {
+        try {
+          final address = await LocationService.reverseGeocode(
+            (lat as num).toDouble(),
+            (lon as num).toDouble(),
+          );
+          if (!mounted) return;
+          setState(() {
+            _laporanList[i]['lokasi'] = address;
+            _laporanList[i]['lokasi_nama'] = address;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _laporanList[i]['lokasi'] = _laporanList[i]['koordinat'];
+            _laporanList[i]['lokasi_nama'] = _laporanList[i]['koordinat'];
+          });
+        }
+      }
     }
   }
 
@@ -147,50 +180,8 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getDummyData() {
-    return [
-      {
-        'kategori': 'Kerusakan jalan',
-        'tanggal': '26 Apr 2026 • 08:45 WIB',
-        'lokasi': 'Kec. Menteng, Jakarta\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Karanganyar-Matesih, Kec. Menteng',
-        'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Terdapat lubang yang cukup besar di tengah persimpangan. Sangat berbahaya bagi pengendara pada malam hari.',
-        'status': 'DIAJUKAN',
-        'icon': Icons.add_road_rounded,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-      {
-        'kategori': 'Lampu penerangan jalan',
-        'tanggal': '15 Mar 2026 • 08:15 WIB',
-        'lokasi': 'Jl. Sudirman No.12\n-7.534587, 110.838543',
-        'lokasi_nama': 'Jl. Sudirman No.12, Jakarta Pusat',
-        'koordinat': '-7.534587, 110.838543',
-        'deskripsi': 'Lampu penerangan jalan sudah mati selama lebih dari 2 minggu.',
-        'status': 'SELESAI',
-        'respon': 'Tim teknis telah menyelesaikan penggantian lampu. Terima kasih atas laporan Anda.',
-        'petugas_nama': 'Admin Dinas PU',
-        'petugas_waktu': '16 Mar 2026 • 09:30 WIB',
-        'icon': Icons.power_off_rounded,
-        'iconBg': const Color(0xFFFFDFDF),
-        'iconColor': const Color(0xFF9F0F0F),
-      },
-      {
-        'kategori': 'Drainase',
-        'tanggal': '21 Jan 2026 • 12:45 WIB',
-        'lokasi': 'Kec. Jebres, Mojosongo,\nSurakarta',
-        'lokasi_nama': 'Jl. Mojosongo Raya, Kec. Jebres, Surakarta',
-        'koordinat': '-7.551234, 110.857432',
-        'deskripsi': 'Saluran drainase tersumbat dan meluap saat hujan deras.',
-        'status': 'DITOLAK',
-        'alasan_tolak': 'Lokasi berada di luar wilayah kewenangan dinas.',
-        'icon': Icons.water_drop_outlined,
-        'iconBg': const Color(0xFFE4EFFF),
-        'iconColor': const Color(0xFF0F3E9F),
-      },
-    ];
-  }
+
+
 
   void _handleSearch() {
     setState(() {

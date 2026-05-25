@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/petugas/detail_penugasan_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
+import 'package:lapor_infrastruktur/services/location_service.dart';
 
 
-class HomePetugasScreen extends StatelessWidget {
+class HomePetugasScreen extends StatefulWidget {
   final String namaUser;
   final String jabatan;
   final String instansi;
@@ -11,105 +13,226 @@ class HomePetugasScreen extends StatelessWidget {
 
   const HomePetugasScreen({
     super.key,
-    this.namaUser = 'Andika Risky Septiawan',
-    this.jabatan = 'Petugas Bina Marga',
-    this.instansi = 'DPUPR Kabupaten Karanganyar',
+    this.namaUser = 'Petugas',
+    this.jabatan = 'Petugas Lapangan',
+    this.instansi = 'Dinas Pekerjaan Umum',
     this.onViewAllTugas,
   });
 
-  // ── Data Dummy ──────────────────────────────────────────────────────────────
-  static final Map<String, dynamic> _sedangDikerjakan = {
-    'kategori': 'Jalan',
-    'tanggal': '23 Apr 2026 • 12:35 WIB',
-    'lokasi_nama': 'Jl. Mojosongo Raya, Kec. Jebres, Surakarta',
-    'lokasi': 'Kec. Jebres, Surakarta\n-6.134357, 112.138223',
-    'koordinat': '-6.134357, 112.138223',
-    'status': 'DIKERJAKAN',
-    'deskripsi': 'Terdapat lubang yang cukup besar di tengah persimpangan. Sangat berbahaya bagi pengendara pada malam hari karena minim penerangan dan sering tergenang air saat hujan.',
-    'catatan_admin': 'Tolong untuk segera diperbaiki karena pada tiga hari lagi akan ditinjau oleh Bapak Presiden dan Wakil Presiden.',
-    'icon': Icons.add_road_rounded,
-    'iconBg': Color(0xFFE4EFFF),
-    'iconColor': Color(0xFF0F3E9F),
-  };
+  @override
+  State<HomePetugasScreen> createState() => _HomePetugasScreenState();
+}
 
-  static final List<Map<String, dynamic>> _penugasanTerbaru = [
-    {
-      'kategori': 'Jalan',
-      'tanggal': '26 Apr 2026 • 08:45 WIB',
-      'lokasi_nama': 'Jl. Karanganyar-Matesih, Kab. Karanganyar',
-      'lokasi': 'Kec. Matesih, Kab. Karanganyar\n-7.534587, 110.838543',
-      'koordinat': '-7.534587, 110.838543',
-      'status': 'DIPROSES',
-      'deskripsi': 'Kerusakan jalan berlubang di persimpangan utama yang cukup berbahaya bagi pengendara.',
-      'catatan_admin': 'Harap segera ditangani sebelum akhir bulan.',
-      'icon': Icons.add_road_rounded,
-      'iconBg': Color(0xFFE4EFFF),
-      'iconColor': Color(0xFF0F3E9F),
-    },
-  ];
+class _HomePetugasScreenState extends State<HomePetugasScreen> {
+  List<Map<String, dynamic>> _tugasList = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssignedReports();
+  }
+
+  Future<void> _loadAssignedReports() async {
+    try {
+      final reports = await ApiService.getAssignedReports();
+      setState(() {
+        _tugasList = reports.map((r) {
+          final report = r as Map<String, dynamic>;
+          final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          final status = _mapStatus(report['status'] ?? 'pending');
+          final lat = report['latitude'] ?? 0.0;
+          final lon = report['longitude'] ?? 0.0;
+
+          return {
+            'id': report['id'],
+            'kategori': kategoriName,
+            'tanggal': _formatDate(report['created_at']),
+            'lokasi': 'Memuat lokasi...',
+            'lokasi_nama': 'Memuat...',
+            'koordinat': '${(lat as num).toStringAsFixed(6)}, ${(lon as num).toStringAsFixed(6)}',
+            'latitude': lat,
+            'longitude': lon,
+            'deskripsi': report['description'] ?? '-',
+            'status': status,
+            'foto_url': report['photo_url'],
+            'catatan_admin': report['assignments'] != null && (report['assignments'] as List).isNotEmpty
+                ? (report['assignments'] as List).first['note'] ?? ''
+                : '',
+            'icon': Icons.add_road_rounded,
+            'iconBg': const Color(0xFFE4EFFF),
+            'iconColor': const Color(0xFF0F3E9F),
+          };
+        }).toList();
+        _isLoading = false;
+      });
+      _reverseGeocodeAll();
+    } catch (e) {
+      setState(() {
+        _tugasList = [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _reverseGeocodeAll() async {
+    for (int i = 0; i < _tugasList.length; i++) {
+      final lat = _tugasList[i]['latitude'];
+      final lon = _tugasList[i]['longitude'];
+      if (lat != null && lon != null && lat != 0.0 && lon != 0.0) {
+        try {
+          final address = await LocationService.reverseGeocode(
+            (lat as num).toDouble(),
+            (lon as num).toDouble(),
+          );
+          if (!mounted) return;
+          setState(() {
+            _tugasList[i]['lokasi'] = '$address\n${_tugasList[i]['koordinat']}';
+            _tugasList[i]['lokasi_nama'] = address;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _tugasList[i]['lokasi'] = _tugasList[i]['koordinat'];
+            _tugasList[i]['lokasi_nama'] = _tugasList[i]['koordinat'];
+          });
+        }
+      }
+    }
+  }
+
+  String _mapStatus(String apiStatus) {
+    switch (apiStatus) {
+      case 'pending':
+        return 'DIAJUKAN';
+      case 'verified':
+        return 'DIPROSES';
+      case 'in_progress':
+        return 'DIKERJAKAN';
+      case 'resolved':
+        return 'SELESAI';
+      case 'spam':
+        return 'DITOLAK';
+      default:
+        return 'DIAJUKAN';
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      final months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      return '${date.day} ${months[date.month]} ${date.year} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} WIB';
+    } catch (_) {
+      return dateStr;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
+    // Separate by status
+    final sedangDikerjakan = _tugasList.where((t) => t['status'] == 'DIKERJAKAN').toList();
+    final penugasanLain = _tugasList.where((t) => t['status'] != 'DIKERJAKAN').toList();
 
-            // ── Header ──
-            _buildHeader(),
-            const SizedBox(height: 20),
+    return RefreshIndicator(
+      onRefresh: _loadAssignedReports,
+      color: AppColors.primaryBlue,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
 
-            // ── Kartu Instansi ──
-            _buildInstansiCard(),
-            const SizedBox(height: 28),
+              // ── Header ──
+              _buildHeader(),
+              const SizedBox(height: 20),
 
-            // ── Sedang Dikerjakan ──
-            Text(
-              'Sedang Dikerjakan',
-              style: AppTextStyles.label.copyWith(
-                fontSize: 18,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _buildTugasCard(context, _sedangDikerjakan),
-            const SizedBox(height: 28),
+              // ── Kartu Instansi ──
+              _buildInstansiCard(),
+              const SizedBox(height: 28),
 
-            // ── Penugasan Terbaru ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Penugasan Terbaru',
-                  style: AppTextStyles.label.copyWith(
-                    fontSize: 18,
-                    color: const Color(0xFF1A1A1A),
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CircularProgressIndicator(color: AppColors.primaryBlue),
                   ),
-                ),
-                GestureDetector(
-                  onTap: onViewAllTugas,
-
-                  child: Text(
-                    'Lihat Semua',
+                )
+              else ...[
+                // ── Sedang Dikerjakan ──
+                if (sedangDikerjakan.isNotEmpty) ...[
+                  Text(
+                    'Sedang Dikerjakan',
                     style: AppTextStyles.label.copyWith(
-                      fontSize: 14,
-                      color: AppColors.primaryBlue,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      color: const Color(0xFF1A1A1A),
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  ...sedangDikerjakan.map((item) => _buildTugasCard(context, item)),
+                  const SizedBox(height: 28),
+                ],
+
+                // ── Penugasan Terbaru ──
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Penugasan Terbaru',
+                      style: AppTextStyles.label.copyWith(
+                        fontSize: 18,
+                        color: const Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: widget.onViewAllTugas,
+                      child: Text(
+                        'Lihat Semua',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 14,
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 14),
+                if (penugasanLain.isEmpty && sedangDikerjakan.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        children: [
+                          Icon(Icons.assignment_outlined,
+                              size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum ada penugasan.',
+                            style: AppTextStyles.label.copyWith(
+                              color: const Color(0xFF7A7A7A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...penugasanLain.map((item) => _buildTugasCard(context, item)),
               ],
-            ),
-            const SizedBox(height: 14),
-            ..._penugasanTerbaru.map(
-              (item) => _buildTugasCard(context, item),
-            ),
-            const SizedBox(height: 100),
-          ],
+
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );
@@ -150,7 +273,7 @@ class HomePetugasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                namaUser,
+                widget.namaUser,
                 style: AppTextStyles.label.copyWith(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -207,7 +330,7 @@ class HomePetugasScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  jabatan,
+                  widget.jabatan,
                   style: AppTextStyles.label.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -216,7 +339,7 @@ class HomePetugasScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  instansi,
+                  widget.instansi,
                   style: AppTextStyles.appSubtitle.copyWith(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.85),

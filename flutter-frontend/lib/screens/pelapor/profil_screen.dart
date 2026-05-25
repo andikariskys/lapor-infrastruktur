@@ -115,6 +115,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.pop(ctx);
+                          ApiService.resetDio();
                           await ApiService.clearToken();
                           if (!context.mounted) return;
                           Navigator.pushAndRemoveUntil(

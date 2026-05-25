@@ -1,15 +1,63 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Central API service that manages all communication with the FastAPI backend.
-/// Handles token storage, auth headers, and all CRUD operations.
+/// Servis API utama buat ngatur semua komunikasi ke backend FastAPI.
+/// Pake Dio plus interceptor biar token otomatis keurus dan gampang nanganin error.
 class ApiService {
-  // Change this to your backend URL
-  static const String baseUrl = 'http://localhost:8000/api';
+  // Ganti ini sama URL backend
+  static const String baseUrl = 'https://lapor-api.ars-projects.my.id/api';
 
-  // ─── Token Management ─────────────────────────────────────────────────────
+  // Singleton Dio instance yang udah dipasangin interceptor
+  static Dio? _dio;
+
+  /// Ambil instance singleton Dio yang udah disetting interceptornya.
+  static Dio get dio {
+    _dio ??= _createDio();
+    return _dio!;
+  }
+
+  /// Bikin instance Dio baru sekalian sama opsi default dan interceptor.
+  static Dio _createDio() {
+    final dioInstance = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    // Masukin auth interceptor biar token otomatis nyelip & error kehandle
+    dioInstance.interceptors.add(_AuthInterceptor());
+
+    // Tambahin logging interceptor (cuma buat mode debug aja)
+    assert(() {
+      dioInstance.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => print('🌐 DIO: $obj'),
+        ),
+      );
+      return true;
+    }());
+
+    return dioInstance;
+  }
+
+  /// Reset instance Dio (buat ngebersihin state interceptor).
+  static void resetDio() {
+    _dio?.close();
+    _dio = null;
+  }
+
+  // Ngurusin Token
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -41,87 +89,91 @@ class ApiService {
     return null;
   }
 
-  static Map<String, String> _authHeaders(String token) => {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
+  // Helper: Ambil pesan error dari exceptionnya Dio
 
-  // ─── Auth ──────────────────────────────────────────────────────────────────
+  static String _extractError(DioException e, String fallback) {
+    if (e.response?.data != null) {
+      try {
+        final data = e.response!.data;
+        if (data is Map<String, dynamic>) {
+          return data['detail']?.toString() ?? fallback;
+        }
+      } catch (_) {}
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Koneksi timeout. Periksa jaringan Anda.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Tidak dapat terhubung ke server.';
+    }
+    return fallback;
+  }
 
-  /// Register new user (citizen role by default)
+  // Autentikasi
+
+  /// Daftarin user baru (defaultnya jadi warga/pelapor)
   static Future<Map<String, dynamic>> register({
     required String name,
     required String email,
     required String phone,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'password': password,
-        'role': 'citizen',
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Registrasi gagal');
+    try {
+      final response = await dio.post(
+        '/auth/register',
+        data: {
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'password': password,
+          'role': 'citizen',
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Registrasi gagal'));
     }
   }
 
-  /// Login and receive JWT token
+  /// Buat login dan dapetin token JWT
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'username': email,
-        'password': password,
-      },
-    );
+    try {
+      // Endpoint login ini pakenya format form-urlencoded (standar OAuth2)
+      final response = await dio.post(
+        '/auth/login',
+        data: {'username': email, 'password': password},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      final data = response.data as Map<String, dynamic>;
       await saveToken(data['access_token']);
-      // Fetch user profile right away
+
+      // Langsung tarik aja data profil usernya
       final profile = await getMyProfile();
       await saveUserData(profile);
       return profile;
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Login gagal');
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Login gagal'));
     }
   }
 
-  /// Get current user profile
+  /// Ambil data profil user yang lagi login
   static Future<Map<String, dynamic>> getMyProfile() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/auth/me'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal memuat profil');
+    try {
+      final response = await dio.get('/auth/me');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat profil'));
     }
   }
 
-  // ─── Reports (Pelapor) ────────────────────────────────────────────────────
+  // Laporan (Buat Pelapor)
 
-  /// Create a new report with image upload
+  /// Bikin laporan baru sekalian upload gambarnya
   static Future<Map<String, dynamic>> createReport({
     required String description,
     required double latitude,
@@ -130,226 +182,202 @@ class ApiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final formData = FormData.fromMap({
+        'description': description,
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'category_id': categoryId.toString(),
+        'image': MultipartFile.fromBytes(imageBytes, filename: fileName),
+      });
 
-    final request =
-        http.MultipartRequest('POST', Uri.parse('$baseUrl/reports'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['description'] = description;
-    request.fields['latitude'] = latitude.toString();
-    request.fields['longitude'] = longitude.toString();
-    request.fields['category_id'] = categoryId.toString();
-    request.files.add(
-      http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['detail'] ?? 'Gagal mengirim laporan');
+      final response = await dio.post(
+        '/reports',
+        data: formData,
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim laporan'));
     }
   }
 
-  /// Get my reports (citizen)
+  /// Ambil list laporan (warga/pelapor)
   static Future<List<dynamic>> getMyReports() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/my'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Gagal memuat laporan');
+    try {
+      final response = await dio.get('/reports/my');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat laporan'));
     }
   }
 
-  /// Get assigned reports (officer)
+  /// Ambil list tugas/laporan buat petugas
   static Future<List<dynamic>> getAssignedReports() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/assigned'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Gagal memuat tugas');
+    try {
+      final response = await dio.get('/reports/assigned');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat tugas'));
     }
   }
 
-  /// Get report detail
+  /// Ambil detail spesifik laporannya
   static Future<Map<String, dynamic>> getReportDetail(int reportId) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/$reportId'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal memuat detail laporan');
+    try {
+      final response = await dio.get('/reports/$reportId');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat detail laporan'));
     }
   }
 
-  /// Update report status (officer/admin)
+  /// Update status laporan (khusus petugas/admin)
   static Future<Map<String, dynamic>> updateReportStatus({
     required int reportId,
     required String status,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/reports/$reportId/verify'),
-      headers: _authHeaders(token),
-      body: json.encode({'status': status}),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengupdate status');
+    try {
+      final response = await dio.patch(
+        '/reports/$reportId/verify',
+        data: {'status': status},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengupdate status'));
     }
   }
 
-  /// Update user profile
+  /// Update data profil user
   static Future<Map<String, dynamic>> updateMyProfile({
     String? name,
     String? phone,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (phone != null) body['phone'] = phone;
 
-    final body = <String, dynamic>{};
-    if (name != null) body['name'] = name;
-    if (phone != null) body['phone'] = phone;
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/users/me'),
-      headers: _authHeaders(token),
-      body: json.encode(body),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      final response = await dio.patch('/users/me', data: body);
+      final data = response.data as Map<String, dynamic>;
       await saveUserData(data);
       return data;
-    } else {
-      throw Exception('Gagal memperbarui profil');
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memperbarui profil'));
     }
   }
 
-  /// Change password (using login endpoint as workaround since backend has no direct endpoint)
+  /// Ganti password dengan memverifikasi password lama via login, lalu memanggil endpoint reset-password
   static Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    // The backend doesn't have a direct change password for citizens
-    // But we can verify old password by trying to login, then update
+    // Backend belum punya endpoint khusus ganti password untuk warga (yang memverifikasi old_password)
+    // Jadi kita akali: verifikasi password lama dengan cara nyoba login
     final userData = await getUserData();
     if (userData == null) throw Exception('Data user tidak ditemukan');
 
-    // Verify old password by attempting login
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'username': userData['email'],
-          'password': oldPassword,
-        },
+      await dio.post(
+        '/auth/login',
+        data: {'username': userData['email'], 'password': oldPassword},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      if (response.statusCode != 200) {
-        throw Exception('Kata sandi lama salah');
-      }
     } catch (e) {
       throw Exception('Kata sandi lama salah');
     }
 
-    // Note: The backend doesn't have a user-facing password change endpoint.
-    // For now, we simulate success. In production, add a /api/auth/change-password endpoint.
-    // TODO: Implement backend endpoint for password change
+    // Setelah terverifikasi, panggil endpoint reset password
+    try {
+      final userId = userData['id'];
+      await dio.patch(
+        '/users/$userId/reset-password',
+        data: {'new_password': newPassword},
+      );
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengubah kata sandi'));
+    }
   }
 
-  /// Create feedback for a report
+  /// Ngasih feedback/ulasan buat suatu laporan
   static Future<Map<String, dynamic>> createFeedback({
     required int reportId,
     required String content,
     required int rating,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/reports/$reportId/feedback'),
-      headers: _authHeaders(token),
-      body: json.encode({
-        'content': content,
-        'rating': rating,
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengirim ulasan');
+    try {
+      final response = await dio.post(
+        '/reports/$reportId/feedback',
+        data: {'content': content, 'rating': rating},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim ulasan'));
     }
   }
 
-  /// Add work progress (officer)
+  /// Nambahin update progres kerjaan (buat petugas)
   static Future<Map<String, dynamic>> addWorkProgress({
     required int reportId,
     required String note,
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
+    try {
+      final formData = FormData.fromMap({'note': note});
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/reports/$reportId/progress'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['note'] = note;
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Gagal mengirim progres');
+      final response = await dio.post(
+        '/reports/$reportId/progress',
+        data: formData,
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal mengirim progres'));
     }
   }
 
-  /// Get categories
+  /// Ambil list kategori laporan
   static Future<List<dynamic>> getCategories() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Belum login');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/categories'),
-      headers: _authHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body) as List<dynamic>;
-    } else {
-      return [];
+    try {
+      final response = await dio.get('/categories');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memuat kategori'));
     }
+  }
+}
+
+// Auth Interceptor
+
+/// Interceptor otomatis nyelipin token JWT tiap request
+/// Ngurusi respon belum login / unauthorized (401).
+class _AuthInterceptor extends Interceptor {
+  @override
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    // Gapake token kalau ke endpoint login atau register
+    final path = options.path;
+    if (path.contains('/auth/login') || path.contains('/auth/register')) {
+      return handler.next(options);
+    }
+
+    // Selipin token
+    final token = await ApiService.getToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+
+    return handler.next(options);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Kalau dapet 401 Unauthorized — hapus aja tokennya
+    if (err.response?.statusCode == 401) {
+      await ApiService.clearToken();
+      ApiService.resetDio();
+      // Opsional: lempar user balik ke halaman login lewat global navigator key
+    }
+
+    return handler.next(err);
   }
 }
