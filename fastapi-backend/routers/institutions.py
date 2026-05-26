@@ -6,15 +6,16 @@ import uuid
 import models
 import auth_utils
 from database import get_db, UPLOAD_DIR
+from image_utils import compress_and_save_image
 
 router = APIRouter(prefix="/api/institutions", tags=["Institutions"])
 
-@router.get("", response_model=List[models.Institution], summary="[Semua] 1. List Semua Lembaga", description="Melihat daftar lembaga atau instansi pemerintah yang terdaftar.")
+@router.get("", response_model=List[models.InstitutionRead], summary="[Semua] 1. List Semua Lembaga", description="Melihat daftar lembaga atau instansi pemerintah yang terdaftar.")
 def get_institutions(db: Annotated[Session, Depends(get_db)]):
     statement = select(models.Institution)
     return db.exec(statement).all()
 
-@router.post("", response_model=models.Institution, summary="[Admin] 2. Tambah Lembaga", description="Admin bisa mendaftarkan lembaga/instansi baru ke dalam sistem.")
+@router.post("", response_model=models.InstitutionRead, summary="[Admin] 2. Tambah Lembaga", description="Admin bisa mendaftarkan lembaga/instansi baru ke dalam sistem.")
 async def create_institution(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.admin]))],
@@ -27,9 +28,8 @@ async def create_institution(
 ):
     file_ext = image.filename.split(".")[-1]
     file_name = f"inst_{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, file_name)
-    with open(file_path, "wb") as f:
-        f.write(await image.read())
+    file_path = os.path.join(UPLOAD_DIR, "institutions", file_name)
+    await compress_and_save_image(image, file_path)
     
     new_inst = models.Institution(
         name=name,
@@ -37,14 +37,14 @@ async def create_institution(
         address=address,
         phone=phone,
         email=email,
-        profile_photo=f"/uploads/{file_name}"
+        profile_photo=file_name
     )
     db.add(new_inst)
     db.commit()
     db.refresh(new_inst)
     return new_inst
 
-@router.patch("/{inst_id}", response_model=models.Institution, summary="[Admin] 3. Update Lembaga", description="Mengubah informasi profil lembaga (alamat, kontak, dll).")
+@router.patch("/{inst_id}", response_model=models.InstitutionRead, summary="[Admin] 3. Update Lembaga", description="Mengubah informasi profil lembaga (alamat, kontak, dll).")
 async def update_institution(
     inst_id: int,
     db: Annotated[Session, Depends(get_db)],
@@ -69,10 +69,9 @@ async def update_institution(
     if image:
         file_ext = image.filename.split(".")[-1]
         file_name = f"inst_{uuid.uuid4()}.{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, file_name)
-        with open(file_path, "wb") as f:
-            f.write(await image.read())
-        db_inst.profile_photo = f"/uploads/{file_name}"
+        file_path = os.path.join(UPLOAD_DIR, "institutions", file_name)
+        await compress_and_save_image(image, file_path)
+        db_inst.profile_photo = file_name
 
     db.add(db_inst)
     db.commit()

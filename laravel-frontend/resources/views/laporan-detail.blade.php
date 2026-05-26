@@ -157,6 +157,75 @@
                     </div>
                 </div>
 
+                <!-- Progres & Bukti Penyelesaian Petugas -->
+                @if(isset($report['resolution_photo']) || ($currentAssignment && !empty($currentAssignment['note'])))
+                    <div class="mt-8 pt-8 border-t border-gray-100">
+                        <div class="flex items-center gap-2 text-green-700 font-bold mb-4">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                            </svg>
+                            Bukti Penyelesaian Petugas
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                            @if(isset($report['resolution_photo']))
+                                <div class="bg-gray-100 rounded-2xl border border-gray-200 relative overflow-hidden h-40 group cursor-pointer" onclick="openResolutionPhotoModal()">
+                                    <img src="{{ config('app.backend_url') . $report['resolution_photo'] }}"
+                                        alt="Bukti Perbaikan"
+                                        class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                                    <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                        <span class="text-white text-xs font-bold bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm">Lihat Foto Bukti</span>
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <div class="md:col-span-2 bg-green-50/50 rounded-2xl border border-green-100 p-5">
+                                <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider mb-2">Catatan Progres / Penyelesaian</p>
+                                <p class="text-sm text-gray-700 leading-relaxed font-semibold italic">
+                                    "{{ $currentAssignment['note'] ?? 'Tidak ada catatan khusus penyelesaian.' }}"
+                                </p>
+                                <div class="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                                    <span class="font-bold text-gray-700">{{ $currentAssignment['officer']['name'] ?? 'Petugas' }}</span>
+                                    <span>•</span>
+                                    <span>Dikonfirmasi pada {{ \Carbon\Carbon::parse($currentAssignment['updated_at'] ?? now())->format('Y-m-d H:i') }} WIB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Ulasan & Rating Warga -->
+                @php
+                    $currentFeedback = !empty($report['feedbacks']) ? $report['feedbacks'][0] : null;
+                @endphp
+                @if($currentFeedback)
+                    <div class="mt-8 pt-8 border-t border-gray-100">
+                        <div class="flex items-center gap-2 text-orange-600 font-bold mb-4">
+                            <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499c.158-.326.608-.326.765 0l1.597 3.238 3.57 1.055c.362.107.507.553.243.812l-2.585 2.531.616 3.557c.063.364-.32.643-.642.47L12 10.978l-3.197 1.674c-.322.172-.705-.107-.642-.47l.616-3.557-2.585-2.531c-.264-.259-.119-.705.243-.812l3.57-1.055 1.597-3.238Z" />
+                            </svg>
+                            Ulasan & Rating Kepuasan Pelapor
+                        </div>
+                        <div class="bg-orange-50/50 rounded-2xl border border-orange-100 p-5">
+                            <div class="flex items-center gap-1.5 mb-3">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <svg class="w-5 h-5 {{ $i <= $currentFeedback['rating'] ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200' }}" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                @endfor
+                                <span class="ml-2 text-sm font-extrabold text-orange-700">({{ $currentFeedback['rating'] }} / 5)</span>
+                            </div>
+                            <p class="text-sm text-gray-700 leading-relaxed font-semibold italic">
+                                "{{ $currentFeedback['content'] }}"
+                            </p>
+                            <div class="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                                <span class="font-bold text-gray-700">{{ $currentFeedback['user']['name'] ?? 'Pelapor' }}</span>
+                                <span>•</span>
+                                <span>Dikirim pada {{ \Carbon\Carbon::parse($currentFeedback['created_at'] ?? now())->format('Y-m-d H:i') }} WIB</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Deskripsi -->
                 <div class="mt-8">
                     <h3 class="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-2">Deskripsi Masalah</h3>
@@ -284,8 +353,30 @@
         </div>
     </div>
 
+    <!-- Resolution Photo Lightbox Modal -->
+    @if(isset($report['resolution_photo']))
+        <div id="resolution-photo-modal"
+            class="fixed inset-0 z-50 bg-black/95 hidden flex flex-col items-center justify-center backdrop-blur-md opacity-0 transition-opacity duration-300">
+            <div
+                class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+                <h3 class="text-white font-bold text-lg">Foto Bukti Perbaikan (Penyelesaian)</h3>
+                <button onclick="closeResolutionPhotoModal()"
+                    class="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2.5 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="w-full h-full p-4 sm:p-12 flex items-center justify-center pt-24">
+                <img src="{{ config('app.backend_url') . $report['resolution_photo'] }}"
+                    alt="Bukti Perbaikan" class="max-h-full max-w-full object-contain rounded-2xl shadow-2xl ring-1 ring-white/10">
+            </div>
+        </div>
+    @endif
+
     <script>
         const photoModal = document.getElementById('photo-modal');
+        const resolutionPhotoModal = document.getElementById('resolution-photo-modal');
         const selectInstitution = document.getElementById('select-institution');
         const selectOfficer = document.getElementById('select-officer');
         const officerOptions = Array.from(selectOfficer.options);
@@ -335,17 +426,44 @@
         }
 
         function closePhotoModal() {
-            photoModal.classList.remove('opacity-100');
             photoModal.classList.add('opacity-0');
+            photoModal.classList.remove('opacity-100');
             setTimeout(() => {
                 photoModal.classList.add('hidden');
                 document.body.style.overflow = '';
             }, 300);
         }
 
+        function openResolutionPhotoModal() {
+            if (resolutionPhotoModal) {
+                resolutionPhotoModal.classList.remove('hidden');
+                setTimeout(() => {
+                    resolutionPhotoModal.classList.remove('opacity-0');
+                    resolutionPhotoModal.classList.add('opacity-100');
+                }, 10);
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeResolutionPhotoModal() {
+            if (resolutionPhotoModal) {
+                resolutionPhotoModal.classList.add('opacity-0');
+                resolutionPhotoModal.classList.remove('opacity-100');
+                setTimeout(() => {
+                    resolutionPhotoModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }, 300);
+            }
+        }
+
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !photoModal.classList.contains('hidden')) {
-                closePhotoModal();
+            if (e.key === 'Escape') {
+                if (photoModal && !photoModal.classList.contains('hidden')) {
+                    closePhotoModal();
+                }
+                if (resolutionPhotoModal && !resolutionPhotoModal.classList.contains('hidden')) {
+                    closeResolutionPhotoModal();
+                }
             }
         });
     </script>

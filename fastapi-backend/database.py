@@ -25,5 +25,24 @@ def get_db():
 
 # Directory untuk upload
 UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_DIR, "profiles"), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_DIR, "reports"), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_DIR, "institutions"), exist_ok=True)
+
+# Schema Migration: Add resolution_photo if missing
+from sqlalchemy import text
+def check_and_add_resolution_photo():
+    try:
+        with Session(engine) as session:
+            session.execute(text("SELECT resolution_photo FROM reports LIMIT 1"))
+    except Exception:
+        try:
+            with Session(engine) as session:
+                session.execute(text("ALTER TABLE reports ADD COLUMN resolution_photo VARCHAR(255) NULL"))
+                session.commit()
+                print("Column 'resolution_photo' successfully added to 'reports' table.")
+        except Exception as e:
+            print(f"Error migrating database: {e}")
+
+check_and_add_resolution_photo()

@@ -80,7 +80,7 @@ class UserController extends Controller
                 file_get_contents($request->file('image')->getRealPath()), 
                 $request->file('image')->getClientOriginalName()
             );
-            $response = $request_http->post($this->apiUrl . '/users/' . $id, array_merge($postData, ['_method' => 'PATCH']));
+            $response = $request_http->patch($this->apiUrl . '/users/' . $id, $postData);
         } else {
             $response = $request_http->asForm()->patch($this->apiUrl . '/users/' . $id, $postData);
         }

@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum as PyEnum
+from pydantic import field_validator
 
 # --- Enum Definitions ---
 
@@ -35,6 +36,20 @@ class Institution(InstitutionBase, table=True):
     
     users: List["User"] = Relationship(back_populates="institution")
 
+class InstitutionRead(InstitutionBase):
+    id: int
+    created_at: Optional[datetime] = None
+
+    @field_validator("profile_photo", mode="before")
+    @classmethod
+    def format_profile_photo(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            if v.startswith("/uploads/"):
+                return f"/api/uploads/{v.replace('/uploads/', '')}" 
+            elif not v.startswith("/"):
+                return f"/api/uploads/institutions/{v}"
+        return v
+
 # --- User Model ---
 
 class UserBase(SQLModel):
@@ -63,7 +78,17 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     id: int
     created_at: datetime
-    institution: Optional[InstitutionBase] = None
+    institution: Optional["InstitutionRead"] = None
+
+    @field_validator("profile_photo", mode="before")
+    @classmethod
+    def format_profile_photo(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            if v.startswith("/uploads/"):
+                return f"/api/uploads/{v.replace('/uploads/', '')}" 
+            elif not v.startswith("/"):
+                return f"/api/uploads/profiles/{v}"
+        return v
 
 class UserUpdate(SQLModel):
     name: Optional[str] = None
@@ -113,6 +138,7 @@ class ReportBase(SQLModel):
     latitude: float
     longitude: float
     status: ReportStatus = Field(default=ReportStatus.pending)
+    resolution_photo: Optional[str] = None
 
 class Report(ReportBase, table=True):
     __tablename__ = "reports"
@@ -124,6 +150,32 @@ class Report(ReportBase, table=True):
     category: Optional[Category] = Relationship(back_populates="reports")
     assignments: List["Assignment"] = Relationship(back_populates="report")
     feedbacks: List["Feedback"] = Relationship(back_populates="report")
+
+# --- Feedback Model ---
+
+class FeedbackBase(SQLModel):
+    report_id: int = Field(foreign_key="reports.id")
+    user_id: int = Field(foreign_key="users.id")
+    content: str
+    rating: int = Field(ge=1, le=5)
+
+class Feedback(FeedbackBase, table=True):
+    __tablename__ = "feedbacks"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    
+    report: "Report" = Relationship(back_populates="feedbacks")
+    user: "User" = Relationship(back_populates="feedbacks")
+
+class FeedbackCreate(SQLModel):
+    content: str
+    rating: int = Field(ge=1, le=5)
+
+class FeedbackRead(FeedbackBase):
+    id: int
+    created_at: datetime
+    user: Optional[UserRead] = None
 
 # --- Report Schemas ---
 
@@ -139,6 +191,27 @@ class ReportRead(ReportBase):
     author: Optional[UserRead] = None
     category: Optional[CategoryBase] = None
     assignments: List["AssignmentRead"] = []
+    feedbacks: List[FeedbackRead] = []
+
+    @field_validator("photo_url", mode="before")
+    @classmethod
+    def format_photo_url(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            if v.startswith("/uploads/"):
+                return f"/api/uploads/{v.replace('/uploads/', '')}" 
+            elif not v.startswith("/"):
+                return f"/api/uploads/reports/{v}"
+        return v
+
+    @field_validator("resolution_photo", mode="before")
+    @classmethod
+    def format_resolution_photo(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            if v.startswith("/uploads/"):
+                return f"/api/uploads/{v.replace('/uploads/', '')}" 
+            elif not v.startswith("/"):
+                return f"/api/uploads/reports/{v}"
+        return v
 
 class ReportUpdateStatus(SQLModel):
     status: ReportStatus
@@ -164,26 +237,7 @@ class Assignment(AssignmentBase, table=True):
     report: Report = Relationship(back_populates="assignments")
     officer: User = Relationship(back_populates="assignments")
 
-# --- Feedback Model ---
 
-class FeedbackBase(SQLModel):
-    report_id: int = Field(foreign_key="reports.id")
-    user_id: int = Field(foreign_key="users.id")
-    content: str
-    rating: int = Field(ge=1, le=5)
-
-class Feedback(FeedbackBase, table=True):
-    __tablename__ = "feedbacks"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    
-    report: Report = Relationship(back_populates="feedbacks")
-    user: User = Relationship(back_populates="feedbacks")
-
-class FeedbackCreate(SQLModel):
-    content: str
-    rating: int = Field(ge=1, le=5)
 
 class AssignmentCreate(SQLModel):
     report_id: int

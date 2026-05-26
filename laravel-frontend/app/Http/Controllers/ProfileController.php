@@ -12,7 +12,7 @@ class ProfileController extends Controller
 
     public function __construct()
     {
-        $this->apiUrl = config('app.backend_url') . '/api';
+        $this->apiUrl = config('app.api_url');
     }
 
     public function update(Request $request)
@@ -28,7 +28,7 @@ class ProfileController extends Controller
                 file_get_contents($request->file('image')->getRealPath()), 
                 $request->file('image')->getClientOriginalName()
             );
-            $response = $request_http->post($this->apiUrl . '/users/me', array_merge($postData, ['_method' => 'PATCH']));
+            $response = $request_http->patch($this->apiUrl . '/users/me', $postData);
         } else {
             $response = $request_http->asForm()->patch($this->apiUrl . '/users/me', $postData);
         }

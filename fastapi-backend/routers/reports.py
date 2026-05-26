@@ -10,7 +10,7 @@ from database import get_db, UPLOAD_DIR
 
 router = APIRouter(prefix="/api", tags=["Reports"])
 
-@router.post("/reports", response_model=models.Report, summary="[Pelapor] 1. Membuat Laporan Baru", description="Langkah pertama bagi warga untuk melaporkan kerusakan infrastruktur.")
+@router.post("/reports", response_model=models.ReportRead, summary="[Pelapor] 1. Membuat Laporan Baru", description="Langkah pertama bagi warga untuk melaporkan kerusakan infrastruktur.")
 async def create_report(
     description: Annotated[str, Form()],
     latitude: Annotated[float, Form()],
@@ -22,7 +22,7 @@ async def create_report(
 ):
     file_ext = image.filename.split(".")[-1]
     file_name = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, file_name)
+    file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
     
     with open(file_path, "wb") as f:
         f.write(await image.read())
@@ -33,7 +33,7 @@ async def create_report(
         longitude=longitude,
         category_id=category_id,
         user_id=current_user.id,
-        photo_url=f"/uploads/{file_name}",
+        photo_url=file_name,
         status=models.ReportStatus.pending
     )
     db.add(new_report)
@@ -167,11 +167,12 @@ def update_report(
     return report
 
 @router.post("/reports/{report_id}/progress", response_model=models.ReportRead, summary="[Petugas] 2. Update Progres Kerja", description="Memberikan catatan perkembangan pengerjaan di lapangan.")
-def add_work_progress(
+async def add_work_progress(
     report_id: int,
     note: Annotated[str, Form()],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.officer]))]
+    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.officer]))],
+    image: Annotated[Optional[UploadFile], File()] = None
 ):
     report = db.get(models.Report, report_id)
     if not report:
@@ -192,6 +193,16 @@ def add_work_progress(
     assignment.note = note
     assignment.updated_at = datetime.now()
     
+    # Handle optional resolution photo upload
+    if image:
+        import uuid
+        file_ext = image.filename.split(".")[-1]
+        file_name = f"res_{uuid.uuid4()}.{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
+        with open(file_path, "wb") as f:
+            f.write(await image.read())
+        report.resolution_photo = file_name
+    
     # Optionally update report status to in_progress if it was verified
     if report.status == models.ReportStatus.verified:
         report.status = models.ReportStatus.in_progress
@@ -202,7 +213,7 @@ def add_work_progress(
     db.refresh(report)
     return report
 
-@router.post("/reports/{report_id}/feedback", response_model=models.Feedback, tags=["Feedbacks"], summary="[Pelapor] 3. Memberi Ulasan/Rating", description="Setelah laporan berstatus 'RESOLVED', warga bisa memberikan penilaian kepuasan.")
+@router.post("/reports/{report_id}/feedback", response_model=models.FeedbackRead, tags=["Feedbacks"], summary="[Pelapor] 3. Memberi Ulasan/Rating", description="Setelah laporan berstatus 'RESOLVED', warga bisa memberikan penilaian kepuasan.")
 def create_feedback(
     report_id: int,
     feedback_data: models.FeedbackCreate,
