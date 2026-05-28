@@ -17,7 +17,7 @@ def get_officer_tasks(
     statement = statement.order_by(models.Report.created_at.desc())
     return db.exec(statement).all()
 
-@router.patch("/reports/{report_id}/status", response_model=models.Report)
+@router.patch("/reports/{report_id}/status", response_model=models.ReportRead)
 def officer_update_report_status(
     report_id: int,
     status_update: models.ReportUpdateStatus,

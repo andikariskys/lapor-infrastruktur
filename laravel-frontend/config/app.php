@@ -54,8 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'api_url' => env('API_URL', 'http://localhost:8001/api'),
-    'backend_url' => env('BACKEND_URL', 'http://localhost:8001'),
+    'api_url' => env('API_URL', 'http://localhost:8000/api'),
+    'backend_url' => env('BACKEND_URL', rtrim(preg_replace('/\/api$/i', '', env('API_URL', 'http://localhost:8000/api')), '/')),
 
     /*
     |--------------------------------------------------------------------------

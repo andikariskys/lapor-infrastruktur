@@ -11,7 +11,7 @@ models.SQLModel.metadata.create_all(engine)
 app = FastAPI(
     title="Lapor Infrastruktur API",
     description="API untuk sistem pelaporan kerusakan infrastruktur",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 # Konfigurasi CORS
@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 # Serve file upload statis
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Mendaftarkan Router (Include Routers)
 app.include_router(auth.router)

@@ -1,5 +1,16 @@
 .venv/
 __pycache__/
 .env
-uploads/
+
+# Ignore all uploads by default
+uploads/**/*
+!uploads/
+!uploads/**/
 !uploads/.gitkeep
+!uploads/**/.gitkeep
+
+!uploads/institutions/inst_820ba409-438e-4074-acb3-be3e1f1a6799.jpg
+!uploads/profiles/439e4ae2-2fa0-4be2-833f-e20444e6603d.jpg
+!uploads/profiles/d5b799ee-fc25-437f-8e42-f656311153b7.jpg
+!uploads/reports/8ad31d85-65fd-461c-a9ed-736ec6ceb87f.png
+!uploads/reports/res_e1bcb037-9593-4c9e-a16d-b4dcb50ed476.jpg

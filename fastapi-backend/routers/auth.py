@@ -8,7 +8,7 @@ from database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-@router.post("/register", response_model=models.User, summary="[Auth] 1. Registrasi Akun Pelapor", description="Langkah pertama bagi warga yang ingin melapor. Gunakan ini untuk membuat akun baru.")
+@router.post("/register", response_model=models.UserRead, summary="[Auth] 1. Registrasi Akun Pelapor", description="Langkah pertama bagi warga yang ingin melapor. Gunakan ini untuk membuat akun baru.")
 def register(user_data: models.UserCreate, db: Annotated[Session, Depends(get_db)]):
     hashed_password = auth_utils.get_password_hash(user_data.password)
     new_user = models.User(
@@ -39,7 +39,7 @@ def login(
     access_token = auth_utils.create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", summary="[Auth] 3. Ambil Data Profil Saya", description="Mengecek informasi akun yang sedang login saat ini.")
+@router.get("/me", response_model=models.UserRead, summary="[Auth] 3. Ambil Data Profil Saya", description="Mengecek informasi akun yang sedang login saat ini.")
 def get_user_info(current_user: Annotated[models.User, Depends(auth_utils.get_current_user)]):
     return current_user
 
