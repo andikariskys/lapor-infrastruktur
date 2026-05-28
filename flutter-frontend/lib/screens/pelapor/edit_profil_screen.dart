@@ -19,6 +19,10 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   final _phoneController = TextEditingController();
   bool _isLoading = false;
 
+  bool _namaFocused = false;
+  bool _emailFocused = false;
+  bool _phoneFocused = false;
+
   Uint8List? _imageBytes;
   String? _imageName;
 
@@ -278,22 +282,38 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                 // Nama
                 _buildFieldLabel('Nama Lengkap'),
                 const SizedBox(height: 10),
-                _buildTextField(_namaController, 'Masukkan nama lengkap'),
+                _buildTextField(
+                  _namaController,
+                  'Nama Lengkap',
+                  _namaFocused,
+                  (v) => setState(() => _namaFocused = v),
+                ),
 
                 const SizedBox(height: 20),
 
                 // Email
                 _buildFieldLabel('Email'),
                 const SizedBox(height: 10),
-                _buildTextField(_emailController, 'Masukkan email', keyboardType: TextInputType.emailAddress),
+                _buildTextField(
+                  _emailController,
+                  'Alamat Email',
+                  _emailFocused,
+                  (v) => setState(() => _emailFocused = v),
+                  keyboardType: TextInputType.emailAddress,
+                ),
 
                 const SizedBox(height: 20),
 
                 // Phone
                 _buildFieldLabel('No. Telepon'),
                 const SizedBox(height: 10),
-                _buildTextField(_phoneController, '0881-2345-6789',
-                    keyboardType: TextInputType.phone),
+                _buildTextField(
+                  _phoneController,
+                  'No. Telephone',
+                  _phoneFocused,
+                  (v) => setState(() => _phoneFocused = v),
+                  keyboardType: TextInputType.phone,
+                ),
 
                 const SizedBox(height: 40),
 
@@ -320,26 +340,38 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint,
-      {TextInputType keyboardType = TextInputType.text}) {
-    return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: AppTextStyles.inputText,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle:
-              AppTextStyles.inputText.copyWith(color: const Color(0xFF9E9E9E)),
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint,
+    bool isFocused,
+    ValueChanged<bool> onFocusChange, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Focus(
+      canRequestFocus: false,
+      onFocusChange: onFocusChange,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isFocused ? AppColors.inputActiveBorder : const Color(0xFFE0E0E0),
+            width: isFocused ? 1.8 : 1.0,
+          ),
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: AppTextStyles.inputText,
+          decoration: InputDecoration(
+            hintText: isFocused ? '' : hint,
+            hintStyle:
+                AppTextStyles.inputText.copyWith(color: const Color(0xFF9E9E9E)),
+            border: InputBorder.none,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
         ),
       ),
     );

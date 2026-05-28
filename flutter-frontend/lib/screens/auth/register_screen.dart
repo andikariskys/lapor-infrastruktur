@@ -204,7 +204,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           const SizedBox(height: 8),
           _buildInputField(
             controller: _namaController,
-            hintText: 'Andika Risky Septiawan',
+            hintText: 'Nama Lengkap',
             icon: Icons.person_outline_rounded,
             isFocused: _namaFocused,
             onFocusChange: (v) => setState(() => _namaFocused = v),
@@ -218,7 +218,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           const SizedBox(height: 8),
           _buildInputField(
             controller: _emailController,
-            hintText: 'andikariskys@gmail.com',
+            hintText: 'Alamat Email',
             icon: Icons.mail_outline_rounded,
             isFocused: _emailFocused,
             onFocusChange: (v) => setState(() => _emailFocused = v),
@@ -232,7 +232,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           const SizedBox(height: 8),
           _buildInputField(
             controller: _phoneController,
-            hintText: '088123456789',
+            hintText: 'No. Telephone',
             icon: Icons.phone_outlined,
             isFocused: _phoneFocused,
             onFocusChange: (v) => setState(() => _phoneFocused = v),
@@ -304,7 +304,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           inputFormatters: inputFormatters,
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: isFocused ? '' : hintText,
             hintStyle: AppTextStyles.inputText.copyWith(
               color: AppColors.hintText,
             ),
@@ -349,10 +349,9 @@ class _RegisterScreenState extends State<RegisterScreen>
 
           style: AppTextStyles.inputText,
           decoration: InputDecoration(
-            hintText: '••••••••••',
+            hintText: _passwordFocused ? '' : 'Kata Sandi',
             hintStyle: AppTextStyles.inputText.copyWith(
               color: AppColors.hintText,
-              letterSpacing: 2,
             ),
             prefixIcon: Icon(
               Icons.lock_outline_rounded,

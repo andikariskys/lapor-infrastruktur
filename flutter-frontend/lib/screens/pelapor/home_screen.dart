@@ -9,7 +9,7 @@ import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaUser;
-  const HomeScreen({super.key, this.namaUser = 'Andika Risky Septiawan'});
+  const HomeScreen({super.key, this.namaUser = 'Pengguna'});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -61,17 +61,21 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadUserData() async {
+    // 1. Load instantly from cache for instant response
     try {
       final data = await ApiService.getUserData();
-      if (!mounted) return;
-      if (data != null) {
+      if (data != null && mounted) {
         setState(() {
           _userData = data;
         });
-      } else {
-        final profile = await ApiService.getMyProfile();
-        if (!mounted) return;
-        await ApiService.saveUserData(profile);
+      }
+    } catch (_) {}
+
+    // 2. Fetch fresh profile data from server in background to sync
+    try {
+      final profile = await ApiService.getMyProfile();
+      await ApiService.saveUserData(profile);
+      if (mounted) {
         setState(() {
           _userData = profile;
         });

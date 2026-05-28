@@ -293,20 +293,43 @@ class ApiService {
     required String oldPassword,
     required String newPassword,
   }) async {
-    // Backend belum punya endpoint khusus ganti password untuk warga (yang memverifikasi old_password)
-    // Jadi kita akali: verifikasi password lama dengan cara nyoba login
+    // Ambil data user SEBELUM verifikasi password lama
     final userData = await getUserData();
     if (userData == null) throw Exception('Data user tidak ditemukan');
 
+    // Simpan token saat ini karena interceptor bisa menghapusnya jika 401
+    final currentToken = await getToken();
+
+    // Pakai instance Dio TERPISAH untuk verifikasi password lama
+    // agar interceptor utama tidak menghapus token/user data saat 401
+    final verifyDio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+
     try {
-      await dio.post(
+      await verifyDio.post(
         '/auth/login',
         data: {'username': userData['email'], 'password': oldPassword},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-    } catch (e) {
+    } on DioException catch (_) {
+      // Pastikan token & user data tetap ada setelah percobaan gagal
+      if (currentToken != null) await saveToken(currentToken);
+      await saveUserData(userData);
       throw Exception('Kata sandi lama salah');
+    } finally {
+      verifyDio.close();
     }
+
+    // Pastikan token & user data masih tersimpan setelah verifikasi berhasil
+    if (currentToken != null) await saveToken(currentToken);
+    await saveUserData(userData);
 
     // Setelah terverifikasi, panggil endpoint reset password
     try {

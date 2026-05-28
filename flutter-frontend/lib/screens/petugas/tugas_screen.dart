@@ -43,6 +43,7 @@ class _TugasScreenState extends State<TugasScreen> {
     setState(() => _isLoading = true);
     try {
       final reports = await ApiService.getAssignedReports();
+      if (!mounted) return;
       setState(() {
         _tugasList = reports.map((r) {
           final report = r as Map<String, dynamic>;
@@ -75,6 +76,7 @@ class _TugasScreenState extends State<TugasScreen> {
       });
       _reverseGeocodeAll();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _tugasList = [];
         _isLoading = false;

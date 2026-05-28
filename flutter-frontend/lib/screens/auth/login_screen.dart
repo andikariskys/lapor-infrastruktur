@@ -420,7 +420,7 @@ class _LoginScreenState extends State<LoginScreen>
           style: AppTextStyles.inputText,
           onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
-            hintText: 'andikariskys@gmail.com',
+            hintText: _emailFocused ? '' : 'Email',
             hintStyle: AppTextStyles.inputText.copyWith(
               color: AppColors.hintText,
             ),
@@ -466,10 +466,9 @@ class _LoginScreenState extends State<LoginScreen>
           style: AppTextStyles.inputText,
           onSubmitted: (_) => _handleLogin(),
           decoration: InputDecoration(
-            hintText: '••••••••••',
+            hintText: _passwordFocused ? '' : 'Kata Sandi',
             hintStyle: AppTextStyles.inputText.copyWith(
               color: AppColors.hintText,
-              letterSpacing: 2,
             ),
             prefixIcon: Icon(
               Icons.lock_outline_rounded,

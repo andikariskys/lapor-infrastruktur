@@ -17,20 +17,16 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   String _searchQuery = '';
   bool _isLoading = false;
 
-  final List<String> _filterOptions = [
-    'Semua',
-    'Kerusakan jalan',
-    'Rambu lalu lintas dan marka jalan',
-    'Lampu penerangan jalan',
-    'Drainase'
-  ];
+  // Filter options — otomatis dari API
+  List<String> _filterOptions = ['Semua'];
 
-  // Data — loaded from API or fallback to dummy
+  // Data — loaded from API
   List<Map<String, dynamic>> _laporanList = [];
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     _loadReports();
   }
 
@@ -38,6 +34,41 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await ApiService.getCategories();
+      if (!mounted) return;
+      setState(() {
+        _filterOptions = ['Semua'];
+        for (final c in categories) {
+          final cat = c as Map<String, dynamic>;
+          String name = cat['name'] as String;
+          if (name.toLowerCase() == 'jalan rusak') {
+            name = 'Kerusakan jalan';
+          } else if (name.toLowerCase() == 'lampu jalan') {
+            name = 'Lampu penerangan jalan';
+          }
+          if (!_filterOptions.contains(name)) {
+            _filterOptions.add(name);
+          }
+        }
+        if (!_filterOptions.contains('Lainnya')) {
+          _filterOptions.add('Lainnya');
+        }
+      });
+    } catch (_) {
+      setState(() {
+        _filterOptions = [
+          'Semua',
+          'Kerusakan jalan',
+          'Lampu penerangan jalan',
+          'Drainase',
+          'Lainnya'
+        ];
+      });
+    }
   }
 
   Future<void> _loadReports() async {
@@ -49,10 +80,17 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         _laporanList = reports.map((r) {
           final report = r as Map<String, dynamic>;
           final status = _mapStatus(report['status'] ?? 'pending');
-          final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          
+          String kategoriName = report['category']?['name'] ?? 'Lainnya';
+          if (kategoriName.toLowerCase() == 'jalan rusak') {
+            kategoriName = 'Kerusakan jalan';
+          } else if (kategoriName.toLowerCase() == 'lampu jalan') {
+            kategoriName = 'Lampu penerangan jalan';
+          }
+
           final lat = report['latitude'] ?? 0.0;
           final lon = report['longitude'] ?? 0.0;
-
+ 
           return {
             'id': report['id'],
             'kategori': kategoriName,
@@ -142,43 +180,47 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   }
 
   IconData _getIconForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return Icons.add_road_rounded;
-      case 'lampu penerangan jalan':
-        return Icons.power_off_rounded;
-      case 'drainase':
-        return Icons.water_drop_outlined;
-      case 'rambu lalu lintas dan marka jalan':
-        return Icons.signpost_rounded;
-      default:
-        return Icons.report_problem_rounded;
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return Icons.add_road_rounded;
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return Icons.power_off_rounded;
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return Icons.water_drop_outlined;
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return Icons.signpost_rounded;
+    } else {
+      return Icons.report_problem_rounded;
     }
   }
 
   Color _getIconBgForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return const Color(0xFFE4EFFF);
-      case 'lampu penerangan jalan':
-        return const Color(0xFFFFDFDF);
-      case 'drainase':
-        return const Color(0xFFE4EFFF);
-      default:
-        return const Color(0xFFFFF0E6);
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFFFFDFDF);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFFFF0E6);
+    } else {
+      return const Color(0xFFFFF0E6);
     }
   }
 
   Color _getIconColorForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return const Color(0xFF0F3E9F);
-      case 'lampu penerangan jalan':
-        return const Color(0xFF9F0F0F);
-      case 'drainase':
-        return const Color(0xFF0F3E9F);
-      default:
-        return const Color(0xFFE8720C);
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFF9F0F0F);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFE8720C);
+    } else {
+      return const Color(0xFFE8720C);
     }
   }
 
