@@ -204,9 +204,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ─── BERANDA ───────────────────────────────────────────────────────────────
   Widget _buildBeranda() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadUserData();
+        await _loadReportStats();
+      },
+      color: AppColors.primaryBlue,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   // ─── HEADER ────────────────────────────────────────────────────────────────
@@ -640,13 +648,18 @@ class _HomeScreenState extends State<HomeScreen>
         ],
       ),
       child: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const BuatLaporanScreen(),
             ),
           );
+          // Refresh dashboard data immediately after returning
+          if (mounted) {
+            _loadReportStats();
+            _loadUserData();
+          }
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
