@@ -102,6 +102,11 @@ Berikut adalah serangkaian fitur dan pembaruan arsitektural yang telah diimpleme
 ### 5. Dukungan Unggah Foto Bukti Perbaikan Petugas
 * Endpoint progres kerja `POST /reports/{report_id}/progress` kini mendukung unggahan berkas gambar perbaikan (`image: Annotated[Optional[UploadFile], File()] = None`) dan tersimpan otomatis ke dalam kolom baru `resolution_photo` di tabel laporan.
 
+### 6. Balasan Petugas ke Pelapor (`officer_reply`)
+* Ditambahkan kolom baru **`officer_reply`** (TEXT) di tabel `reports` untuk menyimpan teks balasan/catatan dari petugas yang ditujukan kepada warga pelapor.
+* Saat petugas mengupdate progres pekerjaan melalui endpoint `POST /reports/{report_id}/progress`, isi `note` dari petugas otomatis disimpan ke kolom `officer_reply` di tabel `reports`, sehingga pelapor dapat melihat balasan tersebut di detail laporannya.
+* Kolom `note` pada tabel `assignments` tetap digunakan sebagai catatan internal penugasan dari admin ke petugas saat assign melalui endpoint `POST /reports/{report_id}/assign`.
+
 ---
 
 > [!TIP]
@@ -109,6 +114,6 @@ Berikut adalah serangkaian fitur dan pembaruan arsitektural yang telah diimpleme
 > Backend ini sudah dilengkapi **skema migrasi otomatis** di `database.py` yang akan menambahkan kolom baru saat aplikasi di-start. Namun, jika Anda ingin menambahkannya secara manual di database produksi Anda, jalankan perintah SQL berikut:
 > ```sql
 > ALTER TABLE reports ADD COLUMN resolution_photo VARCHAR(255) NULL;
+> ALTER TABLE reports ADD COLUMN officer_reply TEXT NULL;
 > ```
-
 

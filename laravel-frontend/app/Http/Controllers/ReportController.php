@@ -82,6 +82,7 @@ class ReportController extends Controller
             'category_id' => $request->category_id,
             'institution_id' => $request->institution_id,
             'officer_id' => $request->officer_id,
+            'note' => $request->note,
         ]);
 
         if ($response->successful()) {

@@ -74,7 +74,8 @@
                                 </div>
                                 <div class="space-y-2">
                                     <div class="flex items-center gap-2">
-                                        <h3 class="text-sm font-bold text-gray-900">{{ $report['description'] }}</h3>
+                                        <h3 class="text-sm font-bold text-gray-900">{{ $report['category']['name'] ?? 'Kategori Umum' }}</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5">{{ Str::limit($report['description'], 100, '...') }}</p>
                                     </div>
                                     <div class="flex items-center text-xs text-gray-500 gap-1.5">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"

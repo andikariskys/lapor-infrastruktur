@@ -40,7 +40,7 @@
             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                     <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-blue-900 mb-3">{{ $report['description'] }}</h1>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-blue-900 mb-3">{{ $report['category']['name'] ?? 'Kategori Umum' }}</h1>
                         <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-medium">
                             <div class="flex items-center gap-1.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -49,16 +49,7 @@
                                 </svg>
                                 {{ \Carbon\Carbon::parse($report['created_at'])->format('Y-m-d • H:i') }}
                             </div>
-                            <!-- Kategori Header (Text Only) -->
-                            <div
-                                class="flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-lg text-xs font-bold text-gray-700 border border-gray-100">
-                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.125 1.125 0 0 0 1.591 0l4.318-4.318a1.125 1.125 0 0 0 0-1.591l-9.581-9.581c-.422-.422-.994-.659-1.591-.659Z" />
-                                </svg>
-                                {{ $report['category']['name'] ?? 'Kategori Umum' }}
-                            </div>
+
                         </div>
                     </div>
 
@@ -236,7 +227,7 @@
             </div>
 
             <!-- Verifikasi Laporan Section -->
-            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+            <div id="verification-section" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 {{ in_array($report['status'], ['in_progress', 'resolved']) ? 'opacity-50 pointer-events-none' : '' }}">
                 <div class="flex items-center gap-2 text-blue-800 font-bold mb-6">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -280,7 +271,7 @@
             </div>
 
             <!-- Penugasan Laporan Section -->
-            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+            <div id="assignment-section" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 {{ $report['status'] !== 'verified' ? 'opacity-50 pointer-events-none' : '' }}">
                 <div class="flex items-center gap-2 text-blue-800 font-bold mb-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -317,6 +308,13 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+
+                <!-- Pesan Admin ke Petugas -->
+                <div class="mt-6">
+                    <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Pesan untuk Petugas</label>
+                    <textarea id="note-textarea" name="note" rows="3" disabled placeholder="Tulis catatan atau instruksi untuk petugas pelaksana..."
+                        class="block w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white shadow-sm font-medium resize-none"></textarea>
                 </div>
             </div>
 
@@ -380,6 +378,9 @@
         const selectInstitution = document.getElementById('select-institution');
         const selectOfficer = document.getElementById('select-officer');
         const officerOptions = Array.from(selectOfficer.options);
+        const assignmentSection = document.getElementById('assignment-section');
+        const noteTextarea = document.getElementById('note-textarea');
+        const statusRadios = document.querySelectorAll('input[name="status"]');
 
         function filterOfficers() {
             const institutionId = selectInstitution.value;
@@ -408,8 +409,37 @@
             }
         }
 
-         document.addEventListener('DOMContentLoaded', () => {
-            if (selectInstitution.value) {
+        function toggleAssignmentSection(enabled) {
+            if (enabled) {
+                assignmentSection.classList.remove('opacity-50', 'pointer-events-none');
+                selectInstitution.disabled = false;
+                if (noteTextarea) noteTextarea.disabled = false;
+            } else {
+                assignmentSection.classList.add('opacity-50', 'pointer-events-none');
+                selectInstitution.disabled = true;
+                selectOfficer.disabled = true;
+                if (noteTextarea) noteTextarea.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDisabledStatus = @json(in_array($report['status'], ['in_progress', 'resolved']));
+
+            if (!isDisabledStatus) {
+                // Toggle assignment section based on current radio selection
+                const checkedRadio = document.querySelector('input[name="status"]:checked');
+                toggleAssignmentSection(checkedRadio && checkedRadio.value === 'verified');
+
+                // Listen for radio changes
+                statusRadios.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        toggleAssignmentSection(radio.value === 'verified');
+                    });
+                });
+            }
+
+            // Filter officers if institution already selected and section is enabled
+            if (selectInstitution.value && !selectInstitution.disabled) {
                 const currentOfficerId = "{{ $currentOfficerId }}";
                 filterOfficers();
                 selectOfficer.value = currentOfficerId;

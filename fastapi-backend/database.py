@@ -30,19 +30,22 @@ os.makedirs(os.path.join(UPLOAD_DIR, "profiles"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "reports"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "institutions"), exist_ok=True)
 
-# Schema Migration: Add resolution_photo if missing
+# Schema Migration: Add missing columns
 from sqlalchemy import text
-def check_and_add_resolution_photo():
+
+def check_and_add_column(table: str, column: str, column_def: str):
+    """Cek dan tambahkan kolom jika belum ada di tabel."""
     try:
         with Session(engine) as session:
-            session.execute(text("SELECT resolution_photo FROM reports LIMIT 1"))
+            session.execute(text(f"SELECT {column} FROM {table} LIMIT 1"))
     except Exception:
         try:
             with Session(engine) as session:
-                session.execute(text("ALTER TABLE reports ADD COLUMN resolution_photo VARCHAR(255) NULL"))
+                session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}"))
                 session.commit()
-                print("Column 'resolution_photo' successfully added to 'reports' table.")
+                print(f"Column '{column}' successfully added to '{table}' table.")
         except Exception as e:
-            print(f"Error migrating database: {e}")
+            print(f"Error migrating database ({table}.{column}): {e}")
 
-check_and_add_resolution_photo()
+check_and_add_column("reports", "resolution_photo", "VARCHAR(255) NULL")
+check_and_add_column("reports", "officer_reply", "TEXT NULL")

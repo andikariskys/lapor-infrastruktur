@@ -170,7 +170,8 @@ def update_report(
     status: Annotated[Optional[str], Form()] = None,
     category_id: Annotated[Optional[int], Form()] = None,
     institution_id: Annotated[Optional[int], Form()] = None,
-    officer_id: Annotated[Optional[int], Form()] = None
+    officer_id: Annotated[Optional[int], Form()] = None,
+    note: Annotated[Optional[str], Form()] = None
 ):
     report = db.get(models.Report, report_id)
     if not report:
@@ -194,7 +195,7 @@ def update_report(
             new_assignment = models.Assignment(
                 report_id=report_id,
                 officer_id=officer_id,
-                note="Ditugaskan melalui update laporan"
+                note=note or "Ditugaskan melalui update laporan"
             )
             db.add(new_assignment)
     
@@ -230,6 +231,9 @@ async def add_work_progress(
     # Update assignment note as progress
     assignment.note = note
     assignment.updated_at = datetime.now()
+
+    # Simpan balasan petugas ke kolom officer_reply di laporan
+    report.officer_reply = note
     
     # Handle optional resolution photo upload
     if image:

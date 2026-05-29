@@ -139,6 +139,7 @@ class ReportBase(SQLModel):
     longitude: float
     status: ReportStatus = Field(default=ReportStatus.pending)
     resolution_photo: Optional[str] = None
+    officer_reply: Optional[str] = None
 
 class Report(ReportBase, table=True):
     __tablename__ = "reports"
