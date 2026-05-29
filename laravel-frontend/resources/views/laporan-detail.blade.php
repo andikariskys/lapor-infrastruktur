@@ -149,7 +149,7 @@
                 </div>
 
                 <!-- Progres & Bukti Penyelesaian Petugas -->
-                @if(isset($report['resolution_photo']) || ($currentAssignment && !empty($currentAssignment['note'])))
+                @if(isset($report['completion_photo']) || ($currentAssignment && !empty($currentAssignment['note'])))
                     <div class="mt-8 pt-8 border-t border-gray-100">
                         <div class="flex items-center gap-2 text-green-700 font-bold mb-4">
                             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -158,9 +158,9 @@
                             Bukti Penyelesaian Petugas
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                            @if(isset($report['resolution_photo']))
+                            @if(isset($report['completion_photo']))
                                 <div class="bg-gray-100 rounded-2xl border border-gray-200 relative overflow-hidden h-40 group cursor-pointer" onclick="openResolutionPhotoModal()">
-                                    <img src="{{ config('app.backend_url') . $report['resolution_photo'] }}"
+                                    <img src="{{ config('app.backend_url') . $report['completion_photo'] }}"
                                         alt="Bukti Perbaikan"
                                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                                     <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
@@ -352,7 +352,7 @@
     </div>
 
     <!-- Resolution Photo Lightbox Modal -->
-    @if(isset($report['resolution_photo']))
+    @if(isset($report['completion_photo']))
         <div id="resolution-photo-modal"
             class="fixed inset-0 z-50 bg-black/95 hidden flex flex-col items-center justify-center backdrop-blur-md opacity-0 transition-opacity duration-300">
             <div
@@ -366,7 +366,7 @@
                 </button>
             </div>
             <div class="w-full h-full p-4 sm:p-12 flex items-center justify-center pt-24">
-                <img src="{{ config('app.backend_url') . $report['resolution_photo'] }}"
+                <img src="{{ config('app.backend_url') . $report['completion_photo'] }}"
                     alt="Bukti Perbaikan" class="max-h-full max-w-full object-contain rounded-2xl shadow-2xl ring-1 ring-white/10">
             </div>
         </div>

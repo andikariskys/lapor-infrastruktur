@@ -243,7 +243,7 @@ async def add_work_progress(
         file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
         with open(file_path, "wb") as f:
             f.write(await image.read())
-        report.resolution_photo = file_name
+        report.completion_photo = file_name
     
     # Optionally update report status to in_progress if it was verified
     if report.status == models.ReportStatus.verified:

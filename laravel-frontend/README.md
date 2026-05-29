@@ -128,9 +128,11 @@ Berikut adalah pembaruan fitur dan arsitektur yang berhasil diterapkan pada proy
 
 > [!IMPORTANT]
 > **Pembaruan Skema Database (MySQL):**
-> Ada penambahan kolom baru `resolution_photo` pada tabel `reports`. Backend FastAPI memiliki fitur migrasi otomatis saat di-start, tetapi jika Anda perlu melakukan migrasi database secara manual di MySQL produksi, jalankan perintah SQL berikut:
+> Ada penambahan kolom baru `completion_photo` pada tabel `reports`. Backend FastAPI memiliki fitur migrasi otomatis saat di-start, tetapi jika Anda perlu melakukan migrasi database secara manual di MySQL produksi, jalankan perintah SQL berikut:
 > ```sql
-> ALTER TABLE reports ADD COLUMN resolution_photo VARCHAR(255) NULL;
+> -- Jika kolom lama 'resolution_photo' sudah ada dan ingin diubah namanya:
+> ALTER TABLE reports CHANGE COLUMN resolution_photo completion_photo VARCHAR(255) NULL;
+> 
+> -- Jika kolom belum ada sama sekali dan ingin ditambahkan langsung:
+> ALTER TABLE reports ADD COLUMN completion_photo VARCHAR(255) NULL;
 > ```
-
-

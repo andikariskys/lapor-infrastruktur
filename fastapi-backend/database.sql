@@ -48,7 +48,7 @@ CREATE TABLE reports (
     latitude DECIMAL(10, 8) NOT NULL,
     longitude DECIMAL(11, 8) NOT NULL,
     status ENUM('pending', 'verified', 'in_progress', 'resolved', 'spam') DEFAULT 'pending',
-    resolution_photo VARCHAR(255) NULL,
+    completion_photo VARCHAR(255) NULL,
     officer_reply TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
