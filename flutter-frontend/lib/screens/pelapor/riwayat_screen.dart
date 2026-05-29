@@ -102,7 +102,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
             'longitude': lon,
             'deskripsi': report['description'] ?? '-',
             'status': status,
+            'api_status': report['status'] ?? 'pending',
             'foto_url': report['photo_url'],
+            'resolution_photo': report['resolution_photo'],
+            'feedbacks': report['feedbacks'] ?? [],
+            'assignments': report['assignments'] ?? [],
             'icon': _getIconForCategory(kategoriName),
             'iconBg': _getIconBgForCategory(kategoriName),
             'iconColor': _getIconColorForCategory(kategoriName),
@@ -155,11 +159,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       case 'verified':
         return 'DIPROSES';
       case 'in_progress':
-        return 'DIPROSES';
+        return 'PERBAIKAN';
       case 'resolved':
         return 'SELESAI';
       case 'spam':
-        return 'DITOLAK';
+        return 'TIDAK VALID';
       default:
         return 'DIAJUKAN';
     }
@@ -475,6 +479,14 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       case 'DIPROSES':
         badgeBgColor = const Color(0xFFD6E4FF);
         badgeTextColor = const Color(0xFF0044C4);
+        break;
+      case 'PERBAIKAN':
+        badgeBgColor = const Color(0xFFFFF3E0);
+        badgeTextColor = const Color(0xFFE65100);
+        break;
+      case 'TIDAK VALID':
+        badgeBgColor = const Color(0xFFFFD5D5);
+        badgeTextColor = const Color(0xFF9F0F0F);
         break;
       default:
         badgeBgColor = const Color(0xFFEBEBEB);

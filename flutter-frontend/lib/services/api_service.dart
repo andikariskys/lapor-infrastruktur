@@ -387,6 +387,16 @@ class ApiService {
       throw Exception(_extractError(e, 'Gagal memuat kategori'));
     }
   }
+
+  /// Cek batas harian laporan (reports/daily-limit)
+  static Future<Map<String, dynamic>> getDailyLimit() async {
+    try {
+      final response = await dio.get('/reports/daily-limit');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memeriksa batas harian'));
+    }
+  }
 }
 
 // Auth Interceptor

@@ -39,6 +39,10 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   List<Map<String, dynamic>> _kategoriList = [];
   bool _isLoadingKategori = true;
 
+  // Daily limit
+  int _remainingReports = 3;
+  bool _isLimitReached = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +61,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     _animController.forward();
     _loadLocation();
     _loadCategories();
+    _loadDailyLimit();
   }
 
   Future<void> _loadLocation() async {
@@ -100,6 +105,19 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
         'Gagal memuat kategori: ${e.toString().replaceFirst("Exception: ", "")}',
         isError: true,
       );
+    }
+  }
+
+  Future<void> _loadDailyLimit() async {
+    try {
+      final data = await ApiService.getDailyLimit();
+      if (!mounted) return;
+      setState(() {
+        _remainingReports = data['remaining'] ?? 0;
+        _isLimitReached = _remainingReports <= 0;
+      });
+    } catch (_) {
+      // Jika endpoint gagal, biarkan default (3)
     }
   }
 
@@ -215,6 +233,13 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   }
 
   void _handleKirimLaporan() async {
+    if (_isLimitReached) {
+      _showSnackBar(
+        'Batas laporan harian sudah tercapai. Coba lagi besok.',
+        isError: true,
+      );
+      return;
+    }
     if (!_hasFile || _imageBytes == null) {
       _showSnackBar(
         'Harap pilih file bukti dokumen terlebih dahulu.',
@@ -731,19 +756,23 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(
-          Icons.info_outline_rounded,
-          color: AppColors.textGrey,
+        Icon(
+          _isLimitReached
+              ? Icons.warning_amber_rounded
+              : Icons.info_outline_rounded,
+          color: _isLimitReached ? Colors.redAccent : AppColors.textGrey,
           size: 16,
         ),
         const SizedBox(width: 6),
         Text('Note: ', style: AppTextStyles.appSubtitle.copyWith(fontSize: 12)),
         Text(
-          'Maks 3 laporan per hari',
+          _isLimitReached
+              ? 'Batas laporan harian tercapai'
+              : 'Sisa $_remainingReports laporan hari ini',
           style: AppTextStyles.appSubtitle.copyWith(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppColors.accentOrange,
+            color: _isLimitReached ? Colors.redAccent : AppColors.accentOrange,
           ),
         ),
       ],

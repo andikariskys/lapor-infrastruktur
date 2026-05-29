@@ -859,10 +859,110 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
                 const SizedBox(height: 16),
               ],
 
+              // ── Rating dari Pelapor (jika SELESAI dan ada feedback) ──
+              if (isSelesai) ...[
+                _buildUserFeedbackSection(),
+                const SizedBox(height: 16),
+              ],
+
               const SizedBox(height: 40),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserFeedbackSection() {
+    final feedbacks = (widget.penugasan['feedbacks'] as List?) ?? [];
+    if (feedbacks.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.star_outline_rounded, color: Color(0xFFFFB300), size: 18),
+              const SizedBox(width: 8),
+              _buildSectionLabel('RATING PENGGUNA'),
+            ]),
+            const SizedBox(height: 12),
+            Text(
+              'Pelapor belum memberikan ulasan.',
+              style: AppTextStyles.bodyText.copyWith(
+                fontSize: 13, color: const Color(0xFF7A7A7A), fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final feedback = feedbacks.first as Map<String, dynamic>;
+    final rating = feedback['rating'] as int? ?? 0;
+    final content = feedback['content'] as String? ?? '';
+    final userName = feedback['user']?['name'] ?? 'Pelapor';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF0),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFE082)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.star_rounded, color: Color(0xFFFFB300), size: 20),
+            const SizedBox(width: 8),
+            _buildSectionLabel('RATING PENGGUNA'),
+          ]),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ...List.generate(5, (i) => Icon(
+                i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: const Color(0xFFFFB300), size: 24,
+              )),
+              const SizedBox(width: 8),
+              Text(
+                '$rating/5',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF8D6E00),
+                ),
+              ),
+            ],
+          ),
+          if (content.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              '"$content"',
+              style: AppTextStyles.bodyText.copyWith(
+                fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black87, height: 1.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(children: [
+            Container(
+              width: 28, height: 28,
+              decoration: const BoxDecoration(color: Color(0xFFD6E4FF), shape: BoxShape.circle),
+              child: const Icon(Icons.person_outline_rounded, color: AppColors.primaryBlue, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              userName,
+              style: AppTextStyles.label.copyWith(fontSize: 12, color: const Color(0xFF555555)),
+            ),
+          ]),
+        ],
       ),
     );
   }
