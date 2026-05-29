@@ -247,17 +247,28 @@ class ApiService {
     }
   }
 
-  /// Update data profil user
+  /// Update data profil user (menggunakan multipart/form-data sesuai backend)
   static Future<Map<String, dynamic>> updateMyProfile({
     String? name,
+    String? email,
     String? phone,
+    Uint8List? imageBytes,
+    String? imageFileName,
   }) async {
     try {
-      final body = <String, dynamic>{};
-      if (name != null) body['name'] = name;
-      if (phone != null) body['phone'] = phone;
+      final formMap = <String, dynamic>{};
+      if (name != null && name.isNotEmpty) formMap['name'] = name;
+      if (email != null && email.isNotEmpty) formMap['email'] = email;
+      if (phone != null && phone.isNotEmpty) formMap['phone'] = phone;
+      if (imageBytes != null && imageFileName != null) {
+        formMap['image'] = MultipartFile.fromBytes(
+          imageBytes,
+          filename: imageFileName,
+        );
+      }
 
-      final response = await dio.patch('/users/me', data: body);
+      final formData = FormData.fromMap(formMap);
+      final response = await dio.patch('/users/me', data: formData);
       final data = response.data as Map<String, dynamic>;
       await saveUserData(data);
       return data;
@@ -266,25 +277,59 @@ class ApiService {
     }
   }
 
+  /// Helper untuk mendapatkan full URL dari path foto profil
+  static String getFullImageUrl(String path) {
+    // Jika path sudah berupa full URL, langsung return
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // Kalau path dimulai dengan /uploads, ambil base URL tanpa /api
+    const baseHost = 'https://lapor-api.ars-projects.my.id';
+    return '$baseHost$path';
+  }
+
   /// Ganti password dengan memverifikasi password lama via login, lalu memanggil endpoint reset-password
   static Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    // Backend belum punya endpoint khusus ganti password untuk warga (yang memverifikasi old_password)
-    // Jadi kita akali: verifikasi password lama dengan cara nyoba login
+    // Ambil data user SEBELUM verifikasi password lama
     final userData = await getUserData();
     if (userData == null) throw Exception('Data user tidak ditemukan');
 
+    // Simpan token saat ini karena interceptor bisa menghapusnya jika 401
+    final currentToken = await getToken();
+
+    // Pakai instance Dio TERPISAH untuk verifikasi password lama
+    // agar interceptor utama tidak menghapus token/user data saat 401
+    final verifyDio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+
     try {
-      await dio.post(
+      await verifyDio.post(
         '/auth/login',
         data: {'username': userData['email'], 'password': oldPassword},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-    } catch (e) {
+    } on DioException catch (_) {
+      // Pastikan token & user data tetap ada setelah percobaan gagal
+      if (currentToken != null) await saveToken(currentToken);
+      await saveUserData(userData);
       throw Exception('Kata sandi lama salah');
+    } finally {
+      verifyDio.close();
     }
+
+    // Pastikan token & user data masih tersimpan setelah verifikasi berhasil
+    if (currentToken != null) await saveToken(currentToken);
+    await saveUserData(userData);
 
     // Setelah terverifikasi, panggil endpoint reset password
     try {
@@ -340,6 +385,16 @@ class ApiService {
       return response.data as List<dynamic>;
     } on DioException catch (e) {
       throw Exception(_extractError(e, 'Gagal memuat kategori'));
+    }
+  }
+
+  /// Cek batas harian laporan (reports/daily-limit)
+  static Future<Map<String, dynamic>> getDailyLimit() async {
+    try {
+      final response = await dio.get('/reports/daily-limit');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(_extractError(e, 'Gagal memeriksa batas harian'));
     }
   }
 }

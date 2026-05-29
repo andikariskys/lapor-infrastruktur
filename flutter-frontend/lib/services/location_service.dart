@@ -1,9 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-
-// Conditional import for web platform
-import 'location_service_stub.dart'
-    if (dart.library.html) 'location_service_web.dart' as platform_location;
+import 'package:geolocator/geolocator.dart';
 
 class LocationData {
   final double latitude;
@@ -32,16 +29,45 @@ class LocationService {
     ),
   );
 
-  /// Get current location with address (reverse geocoding)
+  /// Get current location with address (reverse geocoding) using the native device GPS
   static Future<LocationData> getCurrentLocation() async {
-    final coords = await platform_location.getCurrentPosition();
+    bool serviceEnabled;
+    LocationPermission permission;
 
-    // Reverse geocode to get address
-    final address = await reverseGeocode(coords['latitude']!, coords['longitude']!);
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Layanan lokasi (GPS) tidak aktif di perangkat Anda.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Akses izin lokasi ditolak oleh pengguna.');
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception(
+        'Akses izin lokasi ditolak secara permanen. Harap aktifkan izin lokasi di pengaturan perangkat.',
+      );
+    } 
+
+    // Get current device position using the native Geolocator API
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
+    );
+
+    // Reverse geocode to get human-readable address
+    final address = await reverseGeocode(position.latitude, position.longitude);
 
     return LocationData(
-      latitude: coords['latitude']!,
-      longitude: coords['longitude']!,
+      latitude: position.latitude,
+      longitude: position.longitude,
       address: address,
     );
   }

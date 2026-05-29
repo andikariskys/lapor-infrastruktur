@@ -24,25 +24,31 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Future<void> _loadUserData() async {
-    setState(() => _isLoading = true);
+    // 1. Load instantly from cache for instant response
     try {
       final data = await ApiService.getUserData();
-      if (data != null) {
+      if (data != null && mounted) {
         setState(() {
           _userData = data;
           _isLoading = false;
         });
-      } else {
-        // Try fetching from API
-        final profile = await ApiService.getMyProfile();
-        await ApiService.saveUserData(profile);
+      }
+    } catch (_) {}
+
+    // 2. Fetch fresh profile data from server in background to sync
+    try {
+      final profile = await ApiService.getMyProfile();
+      await ApiService.saveUserData(profile);
+      if (mounted) {
         setState(() {
           _userData = profile;
           _isLoading = false;
         });
       }
     } catch (_) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -222,15 +228,22 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ],
                   border: Border.all(color: Colors.white, width: 4),
                 ),
-                child: const CircleAvatar(
-                  radius: 46,
-                  backgroundColor: Color(0xFFE8ECF5),
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: 60,
-                    color: Color(0xFFCDD3E0),
-                  ),
-                ),
+                child: _userData?['profile_photo'] != null && _userData!['profile_photo'].toString().isNotEmpty
+                    ? CircleAvatar(
+                        radius: 46,
+                        backgroundImage: NetworkImage(
+                          ApiService.getFullImageUrl(_userData!['profile_photo']),
+                        ),
+                      )
+                    : const CircleAvatar(
+                        radius: 46,
+                        backgroundColor: Color(0xFFE8ECF5),
+                        child: Icon(
+                          Icons.person_rounded,
+                          size: 60,
+                          color: Color(0xFFCDD3E0),
+                        ),
+                      ),
               ),
 
               const SizedBox(height: 20),

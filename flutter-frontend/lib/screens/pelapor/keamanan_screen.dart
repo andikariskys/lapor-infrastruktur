@@ -19,6 +19,10 @@ class _KeamananScreenState extends State<KeamananScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  bool _oldPasswordFocused = false;
+  bool _newPasswordFocused = false;
+  bool _confirmPasswordFocused = false;
+
   @override
   void dispose() {
     _oldPasswordController.dispose();
@@ -134,6 +138,8 @@ class _KeamananScreenState extends State<KeamananScreen> {
                   _oldPasswordController,
                   _obscureOld,
                   () => setState(() => _obscureOld = !_obscureOld),
+                  _oldPasswordFocused,
+                  (hasFocus) => setState(() => _oldPasswordFocused = hasFocus),
                 ),
                 const SizedBox(height: 20),
 
@@ -143,6 +149,8 @@ class _KeamananScreenState extends State<KeamananScreen> {
                   _newPasswordController,
                   _obscureNew,
                   () => setState(() => _obscureNew = !_obscureNew),
+                  _newPasswordFocused,
+                  (hasFocus) => setState(() => _newPasswordFocused = hasFocus),
                 ),
                 const SizedBox(height: 20),
 
@@ -152,6 +160,8 @@ class _KeamananScreenState extends State<KeamananScreen> {
                   _confirmPasswordController,
                   _obscureConfirm,
                   () => setState(() => _obscureConfirm = !_obscureConfirm),
+                  _confirmPasswordFocused,
+                  (hasFocus) => setState(() => _confirmPasswordFocused = hasFocus),
                 ),
                 const SizedBox(height: 40),
 
@@ -201,6 +211,8 @@ class _KeamananScreenState extends State<KeamananScreen> {
     TextEditingController controller,
     bool obscure,
     VoidCallback toggleObscure,
+    bool isFocused,
+    ValueChanged<bool> onFocusChange,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,34 +226,38 @@ class _KeamananScreenState extends State<KeamananScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          height: 54,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE2E2E2),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            style: AppTextStyles.inputText,
-            decoration: InputDecoration(
-              hintText: '**********',
-              hintStyle: AppTextStyles.inputText.copyWith(
-                color: const Color(0xFF9E9E9E),
-                letterSpacing: 2.0,
-              ),
-              suffixIcon: GestureDetector(
-                onTap: toggleObscure,
-                child: Icon(
-                  obscure
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+        Focus(
+          canRequestFocus: false,
+          onFocusChange: onFocusChange,
+          child: Container(
+            height: 54,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E2E2),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TextField(
+              controller: controller,
+              obscureText: obscure,
+              style: AppTextStyles.inputText,
+              decoration: InputDecoration(
+                hintText: isFocused ? '' : '**********',
+                hintStyle: AppTextStyles.inputText.copyWith(
                   color: const Color(0xFF9E9E9E),
-                  size: 20,
+                  letterSpacing: 2.0,
                 ),
+                suffixIcon: GestureDetector(
+                  onTap: toggleObscure,
+                  child: Icon(
+                    obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: const Color(0xFF9E9E9E),
+                    size: 20,
+                  ),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
         ),

@@ -15,7 +15,7 @@ class BuatLaporanScreen extends StatefulWidget {
 class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     with SingleTickerProviderStateMixin {
   // State
-  String? _selectedKategori = 'Kerusakan jalan';
+  int? _selectedKategoriId;
   final _deskripsiController = TextEditingController();
   bool _isLoading = false;
   bool _hasFile = false;
@@ -35,31 +35,13 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   double? _longitude;
   bool _isLoadingLocation = true;
 
-  final List<String> _kategoriList = [
-    'Kerusakan jalan',
-    'Rambu lalu lintas dan marka jalan',
-    'Lampu penerangan jalan',
-    'Drainase',
-    'Lainnya',
-  ];
+  // Kategori (otomatis dari API)
+  List<Map<String, dynamic>> _kategoriList = [];
+  bool _isLoadingKategori = true;
 
-  // Map category names to IDs (matching backend)
-  int _getCategoryId(String? kategori) {
-    switch (kategori) {
-      case 'Kerusakan jalan':
-        return 1;
-      case 'Rambu lalu lintas dan marka jalan':
-        return 2;
-      case 'Lampu penerangan jalan':
-        return 3;
-      case 'Drainase':
-        return 4;
-      case 'Lainnya':
-        return 5;
-      default:
-        return 1;
-    }
-  }
+  // Daily limit
+  int _remainingReports = 3;
+  bool _isLimitReached = false;
 
   @override
   void initState() {
@@ -78,6 +60,8 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
     _loadLocation();
+    _loadCategories();
+    _loadDailyLimit();
   }
 
   Future<void> _loadLocation() async {
@@ -98,6 +82,42 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
         _koordinat = 'Izinkan akses lokasi di browser';
         _isLoadingLocation = false;
       });
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await ApiService.getCategories();
+      if (!mounted) return;
+      setState(() {
+        _kategoriList = categories
+            .map((c) => Map<String, dynamic>.from(c as Map))
+            .toList();
+        if (_kategoriList.isNotEmpty) {
+          _selectedKategoriId = _kategoriList.first['id'] as int;
+        }
+        _isLoadingKategori = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingKategori = false);
+      _showSnackBar(
+        'Gagal memuat kategori: ${e.toString().replaceFirst("Exception: ", "")}',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _loadDailyLimit() async {
+    try {
+      final data = await ApiService.getDailyLimit();
+      if (!mounted) return;
+      setState(() {
+        _remainingReports = data['remaining'] ?? 0;
+        _isLimitReached = _remainingReports <= 0;
+      });
+    } catch (_) {
+      // Jika endpoint gagal, biarkan default (3)
     }
   }
 
@@ -213,6 +233,13 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
   }
 
   void _handleKirimLaporan() async {
+    if (_isLimitReached) {
+      _showSnackBar(
+        'Batas laporan harian sudah tercapai. Coba lagi besok.',
+        isError: true,
+      );
+      return;
+    }
     if (!_hasFile || _imageBytes == null) {
       _showSnackBar(
         'Harap pilih file bukti dokumen terlebih dahulu.',
@@ -233,6 +260,11 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
       return;
     }
 
+    if (_selectedKategoriId == null) {
+      _showSnackBar('Harap pilih kategori laporan.', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -240,7 +272,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
         description: _deskripsiController.text.trim(),
         latitude: _latitude!,
         longitude: _longitude!,
-        categoryId: _getCategoryId(_selectedKategori),
+        categoryId: _selectedKategoriId!,
         imageBytes: _imageBytes!,
         fileName: _namaFile ?? 'foto_laporan.jpg',
       );
@@ -629,6 +661,29 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
 
   // ─── KATEGORI DROPDOWN ────────────────────────────────────────────────────
   Widget _buildKategoriDropdown() {
+    if (_isLoadingKategori) {
+      return Container(
+        width: double.infinity,
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8ECF5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFCDD3E0), width: 1.2),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 18, height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Text('Memuat kategori...', style: AppTextStyles.inputText.copyWith(color: AppColors.hintText)),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -638,8 +693,8 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
         border: Border.all(color: const Color(0xFFCDD3E0), width: 1.2),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedKategori,
+        child: DropdownButton<int>(
+          value: _selectedKategoriId,
           icon: const Icon(
             Icons.keyboard_arrow_down_rounded,
             color: AppColors.textDark,
@@ -648,11 +703,12 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
           style: AppTextStyles.inputText.copyWith(color: AppColors.textDark),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          onChanged: (value) => setState(() => _selectedKategori = value),
+          hint: Text('Pilih kategori', style: AppTextStyles.inputText.copyWith(color: AppColors.hintText)),
+          onChanged: (value) => setState(() => _selectedKategoriId = value),
           items: _kategoriList.map((item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item, style: AppTextStyles.inputText),
+            return DropdownMenuItem<int>(
+              value: item['id'] as int,
+              child: Text(item['name'] as String, style: AppTextStyles.inputText),
             );
           }).toList(),
         ),
@@ -700,19 +756,23 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(
-          Icons.info_outline_rounded,
-          color: AppColors.textGrey,
+        Icon(
+          _isLimitReached
+              ? Icons.warning_amber_rounded
+              : Icons.info_outline_rounded,
+          color: _isLimitReached ? Colors.redAccent : AppColors.textGrey,
           size: 16,
         ),
         const SizedBox(width: 6),
         Text('Note: ', style: AppTextStyles.appSubtitle.copyWith(fontSize: 12)),
         Text(
-          'Maks 3 laporan per hari',
+          _isLimitReached
+              ? 'Batas laporan harian tercapai'
+              : 'Sisa $_remainingReports laporan hari ini',
           style: AppTextStyles.appSubtitle.copyWith(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppColors.accentOrange,
+            color: _isLimitReached ? Colors.redAccent : AppColors.accentOrange,
           ),
         ),
       ],

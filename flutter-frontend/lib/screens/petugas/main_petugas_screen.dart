@@ -12,9 +12,9 @@ class MainPetugasScreen extends StatefulWidget {
 
   const MainPetugasScreen({
     super.key,
-    this.namaUser = 'Andika Risky Septiawan',
-    this.jabatan = 'Petugas Bina Marga',
-    this.instansi = 'DPUPR Kabupaten Karanganyar',
+    this.namaUser = 'Pengguna',
+    this.jabatan = 'Petugas Lapangan',
+    this.instansi = 'Instansi belum diatur',
   });
 
   @override

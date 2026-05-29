@@ -9,7 +9,7 @@ import 'package:lapor_infrastruktur/services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaUser;
-  const HomeScreen({super.key, this.namaUser = 'Andika Risky Septiawan'});
+  const HomeScreen({super.key, this.namaUser = 'Pengguna'});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<Offset> _slideAnim;
 
   // Data — loaded dynamically
+  Map<String, dynamic>? _userData;
   String _lokasi = 'Memuat lokasi...';
   String _koordinat = '...';
   bool _isLoadingLocation = true;
@@ -56,6 +57,30 @@ class _HomeScreenState extends State<HomeScreen>
     _animController.forward();
     _loadReportStats();
     _loadLocation();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    // 1. Load instantly from cache for instant response
+    try {
+      final data = await ApiService.getUserData();
+      if (data != null && mounted) {
+        setState(() {
+          _userData = data;
+        });
+      }
+    } catch (_) {}
+
+    // 2. Fetch fresh profile data from server in background to sync
+    try {
+      final profile = await ApiService.getMyProfile();
+      await ApiService.saveUserData(profile);
+      if (mounted) {
+        setState(() {
+          _userData = profile;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadLocation() async {
@@ -154,6 +179,10 @@ class _HomeScreenState extends State<HomeScreen>
               controller: _pageController,
               onPageChanged: (index) {
                 setState(() => _selectedNavIndex = index);
+                if (index == 0) {
+                  _loadUserData();
+                  _loadReportStats();
+                }
               },
               children: [
                 _buildBeranda(),
@@ -201,6 +230,27 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ─── HEADER ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final String nama = _userData?['name'] ?? widget.namaUser;
+    final String? profilePhotoPath = _userData?['profile_photo'];
+
+    Widget avatarImage;
+    if (profilePhotoPath != null && profilePhotoPath.isNotEmpty) {
+      avatarImage = CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(ApiService.getFullImageUrl(profilePhotoPath)),
+      );
+    } else {
+      avatarImage = const CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.primaryBlue,
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
+      );
+    }
+
     return Row(
       children: [
         // Avatar
@@ -208,7 +258,6 @@ class _HomeScreenState extends State<HomeScreen>
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.primaryBlue,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -218,11 +267,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
-          child: const Icon(
-            Icons.person_rounded,
-            color: Colors.white,
-            size: 26,
-          ),
+          child: avatarImage,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -239,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               const SizedBox(height: 2),
               Text(
-                widget.namaUser,
+                nama,
                 style: AppTextStyles.label.copyWith(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,

@@ -17,20 +17,16 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   String _searchQuery = '';
   bool _isLoading = false;
 
-  final List<String> _filterOptions = [
-    'Semua',
-    'Kerusakan jalan',
-    'Rambu lalu lintas dan marka jalan',
-    'Lampu penerangan jalan',
-    'Drainase'
-  ];
+  // Filter options — otomatis dari API
+  List<String> _filterOptions = ['Semua'];
 
-  // Data — loaded from API or fallback to dummy
+  // Data — loaded from API
   List<Map<String, dynamic>> _laporanList = [];
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     _loadReports();
   }
 
@@ -40,18 +36,61 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
     super.dispose();
   }
 
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await ApiService.getCategories();
+      if (!mounted) return;
+      setState(() {
+        _filterOptions = ['Semua'];
+        for (final c in categories) {
+          final cat = c as Map<String, dynamic>;
+          String name = cat['name'] as String;
+          if (name.toLowerCase() == 'jalan rusak') {
+            name = 'Kerusakan jalan';
+          } else if (name.toLowerCase() == 'lampu jalan') {
+            name = 'Lampu penerangan jalan';
+          }
+          if (!_filterOptions.contains(name)) {
+            _filterOptions.add(name);
+          }
+        }
+        if (!_filterOptions.contains('Lainnya')) {
+          _filterOptions.add('Lainnya');
+        }
+      });
+    } catch (_) {
+      setState(() {
+        _filterOptions = [
+          'Semua',
+          'Kerusakan jalan',
+          'Lampu penerangan jalan',
+          'Drainase',
+          'Lainnya'
+        ];
+      });
+    }
+  }
+
   Future<void> _loadReports() async {
     setState(() => _isLoading = true);
     try {
       final reports = await ApiService.getMyReports();
+      if (!mounted) return;
       setState(() {
         _laporanList = reports.map((r) {
           final report = r as Map<String, dynamic>;
           final status = _mapStatus(report['status'] ?? 'pending');
-          final kategoriName = report['category']?['name'] ?? 'Lainnya';
+          
+          String kategoriName = report['category']?['name'] ?? 'Lainnya';
+          if (kategoriName.toLowerCase() == 'jalan rusak') {
+            kategoriName = 'Kerusakan jalan';
+          } else if (kategoriName.toLowerCase() == 'lampu jalan') {
+            kategoriName = 'Lampu penerangan jalan';
+          }
+
           final lat = report['latitude'] ?? 0.0;
           final lon = report['longitude'] ?? 0.0;
-
+ 
           return {
             'id': report['id'],
             'kategori': kategoriName,
@@ -63,7 +102,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
             'longitude': lon,
             'deskripsi': report['description'] ?? '-',
             'status': status,
+            'api_status': report['status'] ?? 'pending',
             'foto_url': report['photo_url'],
+            'resolution_photo': report['resolution_photo'],
+            'feedbacks': report['feedbacks'] ?? [],
+            'assignments': report['assignments'] ?? [],
             'icon': _getIconForCategory(kategoriName),
             'iconBg': _getIconBgForCategory(kategoriName),
             'iconColor': _getIconColorForCategory(kategoriName),
@@ -75,6 +118,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       _reverseGeocodeAll();
     } catch (_) {
       // Show empty state with error
+      if (!mounted) return;
       setState(() {
         _laporanList = [];
         _isLoading = false;
@@ -115,11 +159,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       case 'verified':
         return 'DIPROSES';
       case 'in_progress':
-        return 'DIPROSES';
+        return 'PERBAIKAN';
       case 'resolved':
         return 'SELESAI';
       case 'spam':
-        return 'DITOLAK';
+        return 'TIDAK VALID';
       default:
         return 'DIAJUKAN';
     }
@@ -140,43 +184,47 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   }
 
   IconData _getIconForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return Icons.add_road_rounded;
-      case 'lampu penerangan jalan':
-        return Icons.power_off_rounded;
-      case 'drainase':
-        return Icons.water_drop_outlined;
-      case 'rambu lalu lintas dan marka jalan':
-        return Icons.signpost_rounded;
-      default:
-        return Icons.report_problem_rounded;
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return Icons.add_road_rounded;
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return Icons.power_off_rounded;
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return Icons.water_drop_outlined;
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return Icons.signpost_rounded;
+    } else {
+      return Icons.report_problem_rounded;
     }
   }
 
   Color _getIconBgForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return const Color(0xFFE4EFFF);
-      case 'lampu penerangan jalan':
-        return const Color(0xFFFFDFDF);
-      case 'drainase':
-        return const Color(0xFFE4EFFF);
-      default:
-        return const Color(0xFFFFF0E6);
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFFFFDFDF);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFFFF0E6);
+    } else {
+      return const Color(0xFFFFF0E6);
     }
   }
 
   Color _getIconColorForCategory(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'kerusakan jalan':
-        return const Color(0xFF0F3E9F);
-      case 'lampu penerangan jalan':
-        return const Color(0xFF9F0F0F);
-      case 'drainase':
-        return const Color(0xFF0F3E9F);
-      default:
-        return const Color(0xFFE8720C);
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFF9F0F0F);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFE8720C);
+    } else {
+      return const Color(0xFFE8720C);
     }
   }
 
@@ -313,25 +361,32 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _showFilterModal(context),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.filter_list_rounded,
-                            color: Colors.black87,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            _selectedFilter == 'Semua'
-                                ? 'Filter'
-                                : 'Filter: $_selectedFilter',
-                            style: AppTextStyles.label.copyWith(
-                              fontSize: 16,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.filter_list_rounded,
                               color: Colors.black87,
+                              size: 22,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _selectedFilter == 'Semua'
+                                    ? 'Filter Kategori Laporan'
+                                    : 'Kategori: $_selectedFilter',
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -425,6 +480,14 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         badgeBgColor = const Color(0xFFD6E4FF);
         badgeTextColor = const Color(0xFF0044C4);
         break;
+      case 'PERBAIKAN':
+        badgeBgColor = const Color(0xFFFFF3E0);
+        badgeTextColor = const Color(0xFFE65100);
+        break;
+      case 'TIDAK VALID':
+        badgeBgColor = const Color(0xFFFFD5D5);
+        badgeTextColor = const Color(0xFF9F0F0F);
+        break;
       default:
         badgeBgColor = const Color(0xFFEBEBEB);
         badgeTextColor = const Color(0xFF333333);
@@ -457,7 +520,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon Thumbnail
+          // Icon Thumbnail or Report Image
           Container(
             width: 56,
             height: 56,
@@ -465,11 +528,41 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               color: item['iconBg'] ?? const Color(0xFFE4EFFF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              item['icon'] ?? Icons.report_problem_rounded,
-              color: item['iconColor'] ?? const Color(0xFF0F3E9F),
-              size: 28,
-            ),
+            child: item['foto_url'] != null && item['foto_url'].toString().isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      ApiService.getFullImageUrl(item['foto_url']),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(
+                            item['icon'] ?? Icons.report_problem_rounded,
+                            color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                            size: 28,
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F3E9F)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : Icon(
+                    item['icon'] ?? Icons.report_problem_rounded,
+                    color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                    size: 28,
+                  ),
           ),
           const SizedBox(width: 16),
 
@@ -621,14 +714,17 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          filter,
-                          style: AppTextStyles.label.copyWith(
-                            fontSize: 16,
-                            color: isSelected ? const Color(0xFF003CBF) : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        Expanded(
+                          child: Text(
+                            filter,
+                            style: AppTextStyles.label.copyWith(
+                              fontSize: 16,
+                              color: isSelected ? const Color(0xFF003CBF) : Colors.black87,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         if (isSelected)
                           const Icon(Icons.check_circle_rounded, color: Color(0xFF003CBF)),
                       ],
