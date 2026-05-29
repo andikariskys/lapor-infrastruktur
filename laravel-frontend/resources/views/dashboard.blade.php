@@ -102,8 +102,8 @@
                         <img src="{{ isset($report['photo_url']) ? config('app.backend_url') . $report['photo_url'] : 'https://via.placeholder.com/100?text=No+Image' }}" alt="Thumb" class="w-full h-full object-cover">
                     </div>
                     <div class="min-w-0">
-                        <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">{{ $report['description'] }}</h3>
-                        <p class="text-xs text-gray-500">ID: #{{ $report['id'] }}</p>
+                        <h3 class="text-sm font-bold text-gray-800 mb-0.5 truncate">{{ $report['category']['name'] ?? 'Kategori Umum' }}</h3>
+                        <p class="text-xs text-gray-600 truncate">{{ Str::limit($report['description'], 100, '...') }}</p>
                         <p class="text-xs text-gray-400 mt-0.5">{{ \Carbon\Carbon::parse($report['created_at'])->format('Y-m-d') }}</p>
                     </div>
                 </div>

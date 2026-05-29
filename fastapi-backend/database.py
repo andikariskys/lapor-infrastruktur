@@ -30,19 +30,57 @@ os.makedirs(os.path.join(UPLOAD_DIR, "profiles"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "reports"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "institutions"), exist_ok=True)
 
-# Schema Migration: Add resolution_photo if missing
+# Schema Migration: Add missing columns
 from sqlalchemy import text
-def check_and_add_resolution_photo():
+
+def check_and_add_column(table: str, column: str, column_def: str):
+    """Cek dan tambahkan kolom jika belum ada di tabel."""
     try:
         with Session(engine) as session:
-            session.execute(text("SELECT resolution_photo FROM reports LIMIT 1"))
+            session.execute(text(f"SELECT {column} FROM {table} LIMIT 1"))
     except Exception:
         try:
             with Session(engine) as session:
-                session.execute(text("ALTER TABLE reports ADD COLUMN resolution_photo VARCHAR(255) NULL"))
+                session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}"))
                 session.commit()
-                print("Column 'resolution_photo' successfully added to 'reports' table.")
+                print(f"Column '{column}' successfully added to '{table}' table.")
         except Exception as e:
-            print(f"Error migrating database: {e}")
+            print(f"Error migrating database ({table}.{column}): {e}")
 
-check_and_add_resolution_photo()
+def migrate_resolution_to_completion_photo():
+    """Migrasi aman untuk mengubah nama kolom resolution_photo menjadi completion_photo."""
+    try:
+        # Check if resolution_photo exists
+        has_resolution_photo = False
+        try:
+            with Session(engine) as session:
+                session.execute(text("SELECT resolution_photo FROM reports LIMIT 1"))
+                has_resolution_photo = True
+        except Exception:
+            pass
+
+        # Check if completion_photo exists
+        has_completion_photo = False
+        try:
+            with Session(engine) as session:
+                session.execute(text("SELECT completion_photo FROM reports LIMIT 1"))
+                has_completion_photo = True
+        except Exception:
+            pass
+
+        if has_resolution_photo and not has_completion_photo:
+            with Session(engine) as session:
+                session.execute(text("ALTER TABLE reports CHANGE COLUMN resolution_photo completion_photo VARCHAR(255) NULL"))
+                session.commit()
+                print("Column 'resolution_photo' successfully renamed to 'completion_photo'.")
+        elif not has_completion_photo:
+            with Session(engine) as session:
+                session.execute(text("ALTER TABLE reports ADD COLUMN completion_photo VARCHAR(255) NULL"))
+                session.commit()
+                print("Column 'completion_photo' successfully added to 'reports' table.")
+    except Exception as e:
+        print(f"Error migrating resolution_photo to completion_photo: {e}")
+
+migrate_resolution_to_completion_photo()
+check_and_add_column("reports", "officer_reply", "TEXT NULL")
+

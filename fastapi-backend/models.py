@@ -138,7 +138,8 @@ class ReportBase(SQLModel):
     latitude: float
     longitude: float
     status: ReportStatus = Field(default=ReportStatus.pending)
-    resolution_photo: Optional[str] = None
+    completion_photo: Optional[str] = None
+    officer_reply: Optional[str] = None
 
 class Report(ReportBase, table=True):
     __tablename__ = "reports"
@@ -203,9 +204,9 @@ class ReportRead(ReportBase):
                 return f"/api/uploads/reports/{v}"
         return v
 
-    @field_validator("resolution_photo", mode="before")
+    @field_validator("completion_photo", mode="before")
     @classmethod
-    def format_resolution_photo(cls, v: Optional[str]) -> Optional[str]:
+    def format_completion_photo(cls, v: Optional[str]) -> Optional[str]:
         if v:
             if v.startswith("/uploads/"):
                 return f"/api/uploads/{v.replace('/uploads/', '')}" 

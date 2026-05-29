@@ -18,7 +18,11 @@ def create_category(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.admin]))]
 ):
-    new_category = models.Category(name=category_data.name)
+    new_category = models.Category(
+        name=category_data.name,
+        description=category_data.description,
+        color_code=category_data.color_code
+    )
     db.add(new_category)
     db.commit()
     db.refresh(new_category)
@@ -36,6 +40,8 @@ def update_category(
         raise HTTPException(status_code=404, detail="Kategori tidak ditemukan")
     
     db_category.name = category_data.name
+    db_category.description = category_data.description
+    db_category.color_code = category_data.color_code
     db.add(db_category)
     db.commit()
     db.refresh(db_category)
