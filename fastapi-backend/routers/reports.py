@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Query
 from sqlmodel import Session, select
+from sqlalchemy import func, cast, Date
 from typing import Annotated, List, Optional
 from datetime import datetime
 import os
@@ -9,6 +10,9 @@ import auth_utils
 from database import get_db, UPLOAD_DIR
 
 router = APIRouter(prefix="/api", tags=["Reports"])
+
+# Batas maksimal laporan per hari untuk role citizen (pelapor)
+DAILY_REPORT_LIMIT = 3
 
 @router.post("/reports", response_model=models.ReportRead, summary="[Pelapor] 1. Membuat Laporan Baru", description="Langkah pertama bagi warga untuk melaporkan kerusakan infrastruktur.")
 async def create_report(
@@ -20,6 +24,21 @@ async def create_report(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
 ):
+    # --- Cek limit harian ---
+    today = datetime.now().date()
+    count_statement = select(func.count(models.Report.id)).where(
+        models.Report.user_id == current_user.id,
+        cast(models.Report.created_at, Date) == today
+    )
+    today_count = db.exec(count_statement).one()
+
+    if today_count >= DAILY_REPORT_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Anda telah mencapai batas maksimal {DAILY_REPORT_LIMIT} laporan per hari. Silakan coba lagi besok."
+        )
+    # --- End cek limit harian ---
+
     file_ext = image.filename.split(".")[-1]
     file_name = f"{uuid.uuid4()}.{file_ext}"
     file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
@@ -60,6 +79,25 @@ def get_my_reports(
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
 ):
     return db.exec(select(models.Report).where(models.Report.user_id == current_user.id)).all()
+
+@router.get("/reports/daily-limit", summary="[Pelapor] Cek Sisa Kuota Laporan Harian", description="Mengecek berapa laporan lagi yang bisa dibuat hari ini.")
+def check_daily_limit(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
+):
+    today = datetime.now().date()
+    count_statement = select(func.count(models.Report.id)).where(
+        models.Report.user_id == current_user.id,
+        cast(models.Report.created_at, Date) == today
+    )
+    today_count = db.exec(count_statement).one()
+
+    return {
+        "daily_limit": DAILY_REPORT_LIMIT,
+        "reports_today": today_count,
+        "remaining": max(0, DAILY_REPORT_LIMIT - today_count),
+        "can_create": today_count < DAILY_REPORT_LIMIT
+    }
 
 @router.get("/reports/assigned", response_model=List[models.ReportRead], summary="[Petugas] 1. List Tugas Saya", description="Melihat daftar pekerjaan yang harus segera diselesaikan.")
 def get_assigned_reports(
