@@ -6,6 +6,7 @@ import uuid
 import models
 import auth_utils
 from database import get_db, UPLOAD_DIR
+from image_utils import compress_and_save_image
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -48,10 +49,9 @@ async def create_officer(
     if image:
         file_ext = image.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, file_name)
-        with open(file_path, "wb") as f:
-            f.write(await image.read())
-        file_url = f"/uploads/{file_name}"
+        file_path = os.path.join(UPLOAD_DIR, "profiles", file_name)
+        await compress_and_save_image(image, file_path)
+        file_url = file_name
 
     new_officer = models.User(
         name=name,
@@ -91,10 +91,9 @@ async def update_me(
     if image:
         file_ext = image.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, file_name)
-        with open(file_path, "wb") as f:
-            f.write(await image.read())
-        current_user.profile_photo = f"/uploads/{file_name}"
+        file_path = os.path.join(UPLOAD_DIR, "profiles", file_name)
+        await compress_and_save_image(image, file_path)
+        current_user.profile_photo = file_name
 
     db.add(current_user)
     db.commit()
@@ -126,10 +125,9 @@ async def admin_update_user(
     if image:
         file_ext = image.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, file_name)
-        with open(file_path, "wb") as f:
-            f.write(await image.read())
-        user.profile_photo = f"/uploads/{file_name}"
+        file_path = os.path.join(UPLOAD_DIR, "profiles", file_name)
+        await compress_and_save_image(image, file_path)
+        user.profile_photo = file_name
         
     db.add(user)
     db.commit()

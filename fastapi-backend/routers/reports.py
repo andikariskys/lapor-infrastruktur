@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Query
 from sqlmodel import Session, select
+from sqlalchemy import func, cast, Date
 from typing import Annotated, List, Optional
 from datetime import datetime
 import os
@@ -10,7 +11,10 @@ from database import get_db, UPLOAD_DIR
 
 router = APIRouter(prefix="/api", tags=["Reports"])
 
-@router.post("/reports", response_model=models.Report, summary="[Pelapor] 1. Membuat Laporan Baru", description="Langkah pertama bagi warga untuk melaporkan kerusakan infrastruktur.")
+# Batas maksimal laporan per hari untuk role citizen (pelapor)
+DAILY_REPORT_LIMIT = 3
+
+@router.post("/reports", response_model=models.ReportRead, summary="[Pelapor] 1. Membuat Laporan Baru", description="Langkah pertama bagi warga untuk melaporkan kerusakan infrastruktur.")
 async def create_report(
     description: Annotated[str, Form()],
     latitude: Annotated[float, Form()],
@@ -20,9 +24,24 @@ async def create_report(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
 ):
+    # --- Cek limit harian ---
+    today = datetime.now().date()
+    count_statement = select(func.count(models.Report.id)).where(
+        models.Report.user_id == current_user.id,
+        cast(models.Report.created_at, Date) == today
+    )
+    today_count = db.exec(count_statement).one()
+
+    if today_count >= DAILY_REPORT_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Anda telah mencapai batas maksimal {DAILY_REPORT_LIMIT} laporan per hari. Silakan coba lagi besok."
+        )
+    # --- End cek limit harian ---
+
     file_ext = image.filename.split(".")[-1]
     file_name = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, file_name)
+    file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
     
     with open(file_path, "wb") as f:
         f.write(await image.read())
@@ -33,7 +52,7 @@ async def create_report(
         longitude=longitude,
         category_id=category_id,
         user_id=current_user.id,
-        photo_url=f"/uploads/{file_name}",
+        photo_url=file_name,
         status=models.ReportStatus.pending
     )
     db.add(new_report)
@@ -60,6 +79,25 @@ def get_my_reports(
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
 ):
     return db.exec(select(models.Report).where(models.Report.user_id == current_user.id)).all()
+
+@router.get("/reports/daily-limit", summary="[Pelapor] Cek Sisa Kuota Laporan Harian", description="Mengecek berapa laporan lagi yang bisa dibuat hari ini.")
+def check_daily_limit(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.citizen]))]
+):
+    today = datetime.now().date()
+    count_statement = select(func.count(models.Report.id)).where(
+        models.Report.user_id == current_user.id,
+        cast(models.Report.created_at, Date) == today
+    )
+    today_count = db.exec(count_statement).one()
+
+    return {
+        "daily_limit": DAILY_REPORT_LIMIT,
+        "reports_today": today_count,
+        "remaining": max(0, DAILY_REPORT_LIMIT - today_count),
+        "can_create": today_count < DAILY_REPORT_LIMIT
+    }
 
 @router.get("/reports/assigned", response_model=List[models.ReportRead], summary="[Petugas] 1. List Tugas Saya", description="Melihat daftar pekerjaan yang harus segera diselesaikan.")
 def get_assigned_reports(
@@ -132,7 +170,8 @@ def update_report(
     status: Annotated[Optional[str], Form()] = None,
     category_id: Annotated[Optional[int], Form()] = None,
     institution_id: Annotated[Optional[int], Form()] = None,
-    officer_id: Annotated[Optional[int], Form()] = None
+    officer_id: Annotated[Optional[int], Form()] = None,
+    note: Annotated[Optional[str], Form()] = None
 ):
     report = db.get(models.Report, report_id)
     if not report:
@@ -156,7 +195,7 @@ def update_report(
             new_assignment = models.Assignment(
                 report_id=report_id,
                 officer_id=officer_id,
-                note="Ditugaskan melalui update laporan"
+                note=note or "Ditugaskan melalui update laporan"
             )
             db.add(new_assignment)
     
@@ -167,11 +206,12 @@ def update_report(
     return report
 
 @router.post("/reports/{report_id}/progress", response_model=models.ReportRead, summary="[Petugas] 2. Update Progres Kerja", description="Memberikan catatan perkembangan pengerjaan di lapangan.")
-def add_work_progress(
+async def add_work_progress(
     report_id: int,
     note: Annotated[str, Form()],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.officer]))]
+    current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.officer]))],
+    image: Annotated[Optional[UploadFile], File()] = None
 ):
     report = db.get(models.Report, report_id)
     if not report:
@@ -191,6 +231,19 @@ def add_work_progress(
     # Update assignment note as progress
     assignment.note = note
     assignment.updated_at = datetime.now()
+
+    # Simpan balasan petugas ke kolom officer_reply di laporan
+    report.officer_reply = note
+    
+    # Handle optional resolution photo upload
+    if image:
+        import uuid
+        file_ext = image.filename.split(".")[-1]
+        file_name = f"res_{uuid.uuid4()}.{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, "reports", file_name)
+        with open(file_path, "wb") as f:
+            f.write(await image.read())
+        report.completion_photo = file_name
     
     # Optionally update report status to in_progress if it was verified
     if report.status == models.ReportStatus.verified:
@@ -202,7 +255,7 @@ def add_work_progress(
     db.refresh(report)
     return report
 
-@router.post("/reports/{report_id}/feedback", response_model=models.Feedback, tags=["Feedbacks"], summary="[Pelapor] 3. Memberi Ulasan/Rating", description="Setelah laporan berstatus 'RESOLVED', warga bisa memberikan penilaian kepuasan.")
+@router.post("/reports/{report_id}/feedback", response_model=models.FeedbackRead, tags=["Feedbacks"], summary="[Pelapor] 3. Memberi Ulasan/Rating", description="Setelah laporan berstatus 'RESOLVED', warga bisa memberikan penilaian kepuasan.")
 def create_feedback(
     report_id: int,
     feedback_data: models.FeedbackCreate,
