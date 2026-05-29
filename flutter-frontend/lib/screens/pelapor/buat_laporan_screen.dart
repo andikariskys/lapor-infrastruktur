@@ -225,7 +225,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen>
           _namaFile = image.name;
           _imageBytes = bytes;
         });
-        _showSnackBar('File berhasil dipilih: ${image.name}');
+        _showSnackBar('Foto berhasil dipilih');
       }
     } catch (e) {
       _showSnackBar('Gagal memilih file: ${e.toString()}', isError: true);
