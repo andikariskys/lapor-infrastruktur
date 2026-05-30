@@ -228,15 +228,14 @@ async def add_work_progress(
     if not assignment:
         raise HTTPException(status_code=403, detail="Anda tidak ditugaskan untuk laporan ini")
 
-    # Update assignment note as progress
-    assignment.note = note
+    # Update timestamp saja, TIDAK menimpa assignment.note dari admin
     assignment.updated_at = datetime.now()
 
     # Simpan balasan petugas ke kolom officer_reply di laporan
     report.officer_reply = note
     
     # Handle optional resolution photo upload
-    if image:
+    if image and image.filename and image.size and image.size > 0:
         import uuid
         file_ext = image.filename.split(".")[-1]
         file_name = f"res_{uuid.uuid4()}.{file_ext}"

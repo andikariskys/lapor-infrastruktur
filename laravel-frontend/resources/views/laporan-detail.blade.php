@@ -149,7 +149,7 @@
                 </div>
 
                 <!-- Progres & Bukti Penyelesaian Petugas -->
-                @if(isset($report['completion_photo']) || ($currentAssignment && !empty($currentAssignment['note'])))
+                @if(isset($report['completion_photo']) || ($currentAssignment && !empty($currentAssignment['note'])) || !empty($report['officer_reply']))
                     <div class="mt-8 pt-8 border-t border-gray-100">
                         <div class="flex items-center gap-2 text-green-700 font-bold mb-4">
                             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -169,16 +169,36 @@
                                 </div>
                             @endif
                             
-                            <div class="md:col-span-2 bg-green-50/50 rounded-2xl border border-green-100 p-5">
-                                <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider mb-2">Catatan Progres / Penyelesaian</p>
-                                <p class="text-sm text-gray-700 leading-relaxed font-semibold italic">
-                                    "{{ $currentAssignment['note'] ?? 'Tidak ada catatan khusus penyelesaian.' }}"
-                                </p>
-                                <div class="mt-4 flex items-center gap-2 text-xs text-gray-500">
-                                    <span class="font-bold text-gray-700">{{ $currentAssignment['officer']['name'] ?? 'Petugas' }}</span>
-                                    <span>•</span>
-                                    <span>Dikonfirmasi pada {{ \Carbon\Carbon::parse($currentAssignment['updated_at'] ?? now())->format('Y-m-d H:i') }} WIB</span>
-                                </div>
+                            <div class="md:col-span-2 space-y-4">
+                                {{-- Catatan Penugasan dari Admin --}}
+                                @if($currentAssignment && !empty($currentAssignment['note']))
+                                    <div class="bg-blue-50/50 rounded-2xl border border-blue-100 p-5">
+                                        <p class="text-[10px] uppercase font-bold text-blue-600 tracking-wider mb-2">Catatan Penugasan (Admin)</p>
+                                        <p class="text-sm text-gray-700 leading-relaxed font-semibold italic">
+                                            "{{ $currentAssignment['note'] }}"
+                                        </p>
+                                        <div class="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                                            <span class="font-bold text-gray-700">{{ $currentAssignment['officer']['name'] ?? 'Petugas' }}</span>
+                                            <span>•</span>
+                                            <span>Ditugaskan pada {{ \Carbon\Carbon::parse($currentAssignment['assigned_at'] ?? now())->format('Y-m-d H:i') }} WIB</span>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                {{-- Balasan Progres dari Petugas --}}
+                                @if(!empty($report['officer_reply']))
+                                    <div class="bg-green-50/50 rounded-2xl border border-green-100 p-5">
+                                        <p class="text-[10px] uppercase font-bold text-green-600 tracking-wider mb-2">Balasan Progres (Petugas)</p>
+                                        <p class="text-sm text-gray-700 leading-relaxed font-semibold italic">
+                                            "{{ $report['officer_reply'] }}"
+                                        </p>
+                                        <div class="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                                            <span class="font-bold text-gray-700">{{ $currentAssignment['officer']['name'] ?? 'Petugas' }}</span>
+                                            <span>•</span>
+                                            <span>Diupdate pada {{ \Carbon\Carbon::parse($report['updated_at'] ?? now())->format('Y-m-d H:i') }} WIB</span>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
