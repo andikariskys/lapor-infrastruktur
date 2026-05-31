@@ -20,12 +20,43 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
   String? _namaFile;
   Uint8List? _imageBytes;
   bool _isLoading = false;
+  bool _isLoadingDetail = true;
   late String _currentStatus;
+  Map<String, dynamic>? _detail;
 
   @override
   void initState() {
     super.initState();
     _currentStatus = widget.penugasan['status'] ?? 'DIPROSES';
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    final reportId = widget.penugasan['id'];
+    if (reportId == null) {
+      setState(() => _isLoadingDetail = false);
+      return;
+    }
+    try {
+      final detail = await ApiService.getReportDetail(reportId);
+      // Debug: cek field penyelesaian dari API
+      print('🔍 DEBUG completion_photo: ${detail['completion_photo']}');
+      print('🔍 DEBUG officer_reply: ${detail['officer_reply']}');
+      print('🔍 DEBUG full keys: ${detail.keys.toList()}');
+      if (!mounted) return;
+      setState(() {
+        _detail = detail;
+        _isLoadingDetail = false;
+        // Sync status from API
+        final apiStatus = detail['status'] ?? '';
+        if (apiStatus == 'resolved') _currentStatus = 'SELESAI';
+        else if (apiStatus == 'in_progress') _currentStatus = 'DIKERJAKAN';
+        else if (apiStatus == 'verified') _currentStatus = 'DIPROSES';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingDetail = false);
+    }
   }
 
   @override
@@ -191,14 +222,14 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Kirim progres pekerjaan dengan catatan
+      // 1. Kirim progres pekerjaan dengan catatan DAN gambar bukti
       final catatan = _catatanController.text.trim();
-      if (catatan.isNotEmpty) {
-        await ApiService.addWorkProgress(
-          reportId: reportId,
-          note: catatan,
-        );
-      }
+      await ApiService.addWorkProgress(
+        reportId: reportId,
+        note: catatan.isNotEmpty ? catatan : 'Perbaikan telah diselesaikan.',
+        imageBytes: _imageBytes,
+        fileName: _namaFile ?? 'bukti_perbaikan.jpg',
+      );
 
       // 2. Update status ke resolved
       await ApiService.updateReportStatus(
@@ -208,6 +239,9 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
 
       if (!mounted) return;
       setState(() => _currentStatus = 'SELESAI');
+
+      // 3. Reload detail agar data penyelesaian terupdate
+      _loadDetail();
 
       showDialog(
         context: context,
@@ -783,79 +817,7 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
               if (isSelesai) ...[
                 _buildSectionLabel('LAPORAN PENYELESAIAN'),
                 const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FFF4),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFA6FA96)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.verified_rounded,
-                              color: Color(0xFF2E7D32), size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Tugas Telah Selesai Dikerjakan',
-                            style: AppTextStyles.label.copyWith(
-                              fontSize: 13,
-                              color: const Color(0xFF1B5E20),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (widget.penugasan['respon'] != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          '"${widget.penugasan['respon']}"',
-                          style: AppTextStyles.bodyText.copyWith(
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic,
-                            color: Colors.black87,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFD6E4FF),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person_outline_rounded,
-                                color: AppColors.primaryBlue, size: 18),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.penugasan['petugas_nama'] ?? '-',
-                                style: AppTextStyles.label.copyWith(
-                                    fontSize: 13, color: Colors.black87),
-                              ),
-                              Text(
-                                widget.penugasan['petugas_waktu'] ?? '-',
-                                style: AppTextStyles.bodyText.copyWith(
-                                    fontSize: 11,
-                                    color: const Color(0xFF7A7A7A)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                _buildLaporanPenyelesaianCard(),
                 const SizedBox(height: 16),
               ],
 
@@ -873,8 +835,133 @@ class _DetailPenugasanScreenState extends State<DetailPenugasanScreen> {
     );
   }
 
+  // ─── LAPORAN PENYELESAIAN CARD ─────────────────────────────────────────────
+  Widget _buildLaporanPenyelesaianCard() {
+    final completionPhoto = _detail?['completion_photo'] ?? widget.penugasan['completion_photo'];
+    final officerReply = _detail?['officer_reply'] ?? widget.penugasan['officer_reply'];
+    final assignments = (_detail?['assignments'] as List?) ?? (widget.penugasan['assignments'] as List? ?? []);
+
+    String petugasNama = '-';
+    if (assignments.isNotEmpty) {
+      final assignment = assignments.first as Map<String, dynamic>;
+      final officer = assignment['officer'] as Map<String, dynamic>?;
+      petugasNama = officer?['name'] ?? '-';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FFF4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFA6FA96)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_rounded,
+                  color: Color(0xFF2E7D32), size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Tugas Telah Selesai Dikerjakan',
+                style: AppTextStyles.label.copyWith(
+                  fontSize: 13,
+                  color: const Color(0xFF1B5E20),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          // Catatan/pesan penyelesaian (officer_reply)
+          if (officerReply != null && officerReply.toString().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              '"$officerReply"',
+              style: AppTextStyles.bodyText.copyWith(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+                height: 1.5,
+              ),
+            ),
+          ],
+          if (officerReply == null || officerReply.toString().isEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Perbaikan telah diselesaikan.',
+              style: AppTextStyles.bodyText.copyWith(
+                fontSize: 13,
+                color: Colors.black87,
+                height: 1.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          // Gambar bukti penyelesaian (completion_photo)
+          Container(
+            height: 160,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E2E2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: completionPhoto != null && completionPhoto.toString().isNotEmpty
+                  ? Image.network(
+                      '${ApiService.baseUrl.replaceAll('/api', '')}$completionPhoto',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      loadingBuilder: (context, child, p) {
+                        if (p == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primaryBlue,
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.broken_image_outlined,
+                            color: Colors.grey, size: 40),
+                      ),
+                    )
+                  : const Center(
+                      child: Icon(Icons.image_outlined,
+                          color: Colors.grey, size: 40),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Info petugas
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFD6E4FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_outline_rounded,
+                    color: AppColors.primaryBlue, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                petugasNama,
+                style: AppTextStyles.label.copyWith(
+                    fontSize: 13, color: Colors.black87),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUserFeedbackSection() {
-    final feedbacks = (widget.penugasan['feedbacks'] as List?) ?? [];
+    final feedbacks = (_detail?['feedbacks'] as List?) ?? (widget.penugasan['feedbacks'] as List?) ?? [];
     if (feedbacks.isEmpty) {
       return Container(
         width: double.infinity,

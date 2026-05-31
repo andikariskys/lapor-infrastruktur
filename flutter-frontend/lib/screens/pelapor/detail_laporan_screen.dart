@@ -397,17 +397,16 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   // ─── RESOLVED SECTION (Respon Petugas + Rating) ─────────────────────────
   Widget _buildResolvedSection() {
     final assignments = (_detail?['assignments'] as List?) ?? [];
-    final resolutionPhoto = _detail?['resolution_photo'];
+    final completionPhoto = _detail?['completion_photo'];
     final feedbacks = (_detail?['feedbacks'] as List?) ?? [];
 
     // Get officer info from assignments
     String petugasNama = 'Petugas';
-    String? responText;
+    String? responText = _detail?['officer_reply'];
     if (assignments.isNotEmpty) {
       final assignment = assignments.first as Map<String, dynamic>;
       final officer = assignment['officer'] as Map<String, dynamic>?;
       petugasNama = officer?['name'] ?? 'Petugas';
-      responText = assignment['note'];
     }
 
     return Column(
@@ -453,9 +452,9 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: resolutionPhoto != null && resolutionPhoto.toString().isNotEmpty
+                  child: completionPhoto != null && completionPhoto.toString().isNotEmpty
                       ? Image.network(
-                          '${ApiService.baseUrl.replaceAll('/api', '')}$resolutionPhoto',
+                          '${ApiService.baseUrl.replaceAll('/api', '')}$completionPhoto',
                           fit: BoxFit.cover, width: double.infinity,
                           loadingBuilder: (context, child, p) {
                             if (p == null) return child;

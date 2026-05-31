@@ -364,9 +364,15 @@ class ApiService {
   static Future<Map<String, dynamic>> addWorkProgress({
     required int reportId,
     required String note,
+    Uint8List? imageBytes,
+    String? fileName,
   }) async {
     try {
-      final formData = FormData.fromMap({'note': note});
+      final formMap = <String, dynamic>{'note': note};
+      if (imageBytes != null && fileName != null) {
+        formMap['image'] = MultipartFile.fromBytes(imageBytes, filename: fileName);
+      }
+      final formData = FormData.fromMap(formMap);
 
       final response = await dio.post(
         '/reports/$reportId/progress',
