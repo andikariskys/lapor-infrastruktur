@@ -68,7 +68,8 @@ class _TugasScreenState extends State<TugasScreen> {
                 ? (report['assignments'] as List).first['note'] ?? ''
                 : '',
             'feedbacks': report['feedbacks'] ?? [],
-            'resolution_photo': report['resolution_photo'],
+            'completion_photo': report['completion_photo'],
+            'officer_reply': report['officer_reply'],
             'icon': Icons.add_road_rounded,
             'iconBg': const Color(0xFFE4EFFF),
             'iconColor': const Color(0xFF0F3E9F),
