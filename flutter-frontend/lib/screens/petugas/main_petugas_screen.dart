@@ -4,6 +4,7 @@ import 'package:lapor_infrastruktur/theme/app_theme.dart';
 import 'package:lapor_infrastruktur/screens/petugas/home_petugas_screen.dart';
 import 'package:lapor_infrastruktur/screens/petugas/tugas_screen.dart';
 import 'package:lapor_infrastruktur/screens/pelapor/profil_screen.dart';
+import 'package:lapor_infrastruktur/services/api_service.dart';
 
 class MainPetugasScreen extends StatefulWidget {
   final String namaUser;
@@ -30,6 +31,8 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
+  Map<String, dynamic>? _userData;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +51,26 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
     _animController.forward();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    // 1. Load from cache first for instant display
+    try {
+      final data = await ApiService.getUserData();
+      if (data != null && mounted) {
+        setState(() => _userData = data);
+      }
+    } catch (_) {}
+
+    // 2. Fetch fresh data from server
+    try {
+      final profile = await ApiService.getMyProfile();
+      await ApiService.saveUserData(profile);
+      if (mounted) {
+        setState(() => _userData = profile);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -77,12 +100,16 @@ class _MainPetugasScreenState extends State<MainPetugasScreen>
               controller: _pageController,
               onPageChanged: (index) {
                 setState(() => _selectedNavIndex = index);
+                if (index == 0) {
+                  _loadUserData();
+                }
               },
               children: [
                 HomePetugasScreen(
-                  namaUser: widget.namaUser,
+                  namaUser: _userData?['name'] ?? widget.namaUser,
                   jabatan: widget.jabatan,
                   instansi: widget.instansi,
+                  profilePhotoPath: _userData?['profile_photo'],
                   onViewAllTugas: () {
                     setState(() => _selectedNavIndex = 1);
                     _pageController.animateToPage(
