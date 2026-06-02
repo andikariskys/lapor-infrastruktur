@@ -235,6 +235,7 @@
                     <li class="nav-item"><a class="nav-link" href="#beranda" data-i18n="nav_home">Beranda</a></li>
                     <li class="nav-item"><a class="nav-link" href="#fitur" data-i18n="nav_features">Fitur</a></li>
                     <li class="nav-item"><a class="nav-link" href="#alur" data-i18n="nav_flow">Alur</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#demo" data-i18n="nav_demo">Demo</a></li>
                     <li class="nav-item"><a class="nav-link" href="#unduh" data-i18n="nav_download">Unduh</a></li>
                     <li class="nav-item ms-lg-3">
                         <button class="btn-lang-toggle" onclick="toggleLang()" id="lang-toggle">
@@ -390,6 +391,66 @@
         </div>
     </section>
 
+    <!-- Demo Section -->
+    <section class="section-padding bg-white" id="demo">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold" data-i18n="demo_title">Demo Aplikasi</h2>
+                <p class="text-muted" data-i18n="demo_subtitle">Gunakan akun berikut untuk mencoba fitur di platform kami secara langsung.</p>
+            </div>
+            <div class="row g-4">
+                <!-- Admin Web -->
+                <div class="col-md-6">
+                    <div class="card h-100 p-4 border-primary shadow-sm">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-laptop display-6 text-primary-blue me-3"></i>
+                            <h5 class="mb-0" data-i18n="demo_admin_title">Website Admin</h5>
+                        </div>
+                        <p class="small text-muted" data-i18n="demo_admin_desc">Digunakan oleh instansi untuk memantau, memverifikasi, dan mengelola laporan masyarakat.</p>
+                        <div class="bg-light p-3 rounded mb-3">
+                            <p class="mb-1"><strong>Link:</strong> <a href="https://lapor-min.ars-projects.my.id" target="_blank" class="text-decoration-none">lapor-min.ars-projects.my.id</a></p>
+                            <p class="mb-1"><strong>Email:</strong> admin@test.com</p>
+                            <p class="mb-0"><strong>Pass:</strong> admin123</p>
+                        </div>
+                        <div class="mt-auto">
+                            <a href="https://lapor-min.ars-projects.my.id" target="_blank" class="btn btn-outline-primary btn-sm w-100" data-i18n="demo_open_web">Buka Dashboard</a>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mobile App Roles -->
+                <div class="col-md-6">
+                    <div class="card h-100 p-4 border-primary shadow-sm">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-phone display-6 text-primary-blue me-3"></i>
+                            <h5 class="mb-0" data-i18n="demo_app_title">Aplikasi Mobile</h5>
+                        </div>
+                        <p class="small text-muted" data-i18n="demo_app_desc">Unduh aplikasi dan masuk dengan salah satu akun di bawah untuk mencoba sebagai pelapor atau petugas.</p>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-sm-6">
+                                <div class="bg-light p-3 rounded h-100">
+                                    <h6 class="fw-bold mb-2 text-primary-blue" data-i18n="role_reporter">Pelapor</h6>
+                                    <p class="small mb-1"><strong>Email:</strong> pelapor@test.com</p>
+                                    <p class="small mb-0"><strong>Pass:</strong> pelapor123</p>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="bg-light p-3 rounded h-100">
+                                    <h6 class="fw-bold mb-2 text-primary-blue" data-i18n="role_officer">Petugas</h6>
+                                    <p class="small mb-1"><strong>Email:</strong> petugas@test.com</p>
+                                    <p class="small mb-0"><strong>Pass:</strong> petugas123</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-auto">
+                            <a href="#unduh" class="btn btn-primary btn-sm w-100" data-i18n="demo_download_app">Unduh Aplikasi</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Tech Stack -->
     <section class="section-padding bg-white">
         <div class="container text-center">
@@ -419,30 +480,37 @@
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                 <div>
                                     <h6 class="mb-0 fw-bold">arm64-v8a (64-bit)</h6>
-                                    <small class="text-muted">Size: 24.5 MB</small>
+                                    <small class="text-muted">Size: 18.0 MB</small>
                                 </div>
-                                <a href="#" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1Iw2cGH-1gq1Vx7crQvdqlsTEEqg0C_fC/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                 <div>
                                     <h6 class="mb-0 fw-bold">armeabi-v7a (32-bit)</h6>
-                                    <small class="text-muted">Size: 22.1 MB</small>
+                                    <small class="text-muted">Size: 15.7 MB</small>
                                 </div>
-                                <a href="#" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1atztrFCdVlEPXzbEzIbh7UGtoSQED7Yw/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">x86_64 (emulator Android)</h6>
+                                    <small class="text-muted">Size: 19.3 MB</small>
+                                </div>
+                                <a href="https://drive.google.com/file/d/1vjKPNASkG4CNxWXlqExjqlpPyhv2xptV/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div>
                                     <h6 class="mb-0 fw-bold">Universal APK</h6>
-                                    <small class="text-muted">Size: 48.8 MB</small>
+                                    <small class="text-muted">Size: 50.5 MB</small>
                                 </div>
-                                <a href="#" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/11YD5XVeoped9i5f-duv_SB7end9fk_9a/view?usp=sharing" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-5 offset-lg-1 text-center">
                     <div class="bg-white p-4 d-inline-block rounded-4 shadow">
-                        <img src="https://barcodeapi.org/api/qr/https://lapor-infrastruktur.id/download" alt="QR Code" class="qr-code-img mb-3">
+                        <img src="https://barcodeapi.org/api/qr/https://drive.google.com/drive/folders/1TGwIUud3-QlxeYImLAwQ1Jlh3L1Tih84?usp=sharing" alt="QR Code" class="qr-code-img mb-3">
                         <p class="text-dark fw-bold mb-0" data-i18n="scan_qr">Scan untuk Mengunduh</p>
                     </div>
                 </div>
@@ -465,53 +533,53 @@
                 <div class="carousel-inner pb-5">
                     <div class="carousel-item active">
                         <div class="team-member">
-                            <img src="https://picsum.photos/seed/andika/210/210" alt="Andika">
+                            <img src="andika.png" alt="Andika">
                             <h6 class="fw-bold mb-1">Andika Risky Septiawan</h6>
                             <p class="small text-muted mb-2">Project Manager</p>
                             <div class="team-social d-flex justify-content-center gap-3">
-                                <a href="#"><i class="bi bi-instagram"></i></a>
-                                <a href="#"><i class="bi bi-linkedin"></i></a>
-                                <a href="#"><i class="bi bi-github"></i></a>
-                                <a href="#"><i class="bi bi-envelope"></i></a>
+                                <a href="https://www.instagram.com/_andika.risky/"><i class="bi bi-instagram"></i></a>
+                                <a href="https://www.linkedin.com/in/andikariskys/"><i class="bi bi-linkedin"></i></a>
+                                <a href="https://github.com/andikariskys"><i class="bi bi-github"></i></a>
+                                <a href="mailto:l200230023@student.ums.ac.id"><i class="bi bi-envelope"></i></a>
                             </div>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="team-member">
-                            <img src="https://picsum.photos/seed/haydar/210/210" alt="Haydar">
+                            <img src="haydar.jpeg" alt="Haydar">
                             <h6 class="fw-bold mb-1">Haydar Aulia Rahman</h6>
                             <p class="small text-muted mb-2">System Analyst</p>
                             <div class="team-social d-flex justify-content-center gap-3">
-                                <a href="#"><i class="bi bi-instagram"></i></a>
-                                <a href="#"><i class="bi bi-linkedin"></i></a>
-                                <a href="#"><i class="bi bi-github"></i></a>
-                                <a href="#"><i class="bi bi-envelope"></i></a>
+                                <a href="https://www.instagram.com/ndok_dadar_/"><i class="bi bi-instagram"></i></a>
+                                <a href="https://www.linkedin.com/in/haydar-aulia-rahman-b6b7812a0/"><i class="bi bi-linkedin"></i></a>
+                                <a href="https://github.com/Haydar13D"><i class="bi bi-github"></i></a>
+                                <a href="mailto:l200230051@student.ums.ac.id"><i class="bi bi-envelope"></i></a>
                             </div>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="team-member">
-                            <img src="https://picsum.photos/seed/irfan/210/210" alt="Irfan">
+                            <img src="irfan.png" alt="Irfan">
                             <h6 class="fw-bold mb-1">Irfan Hanif Saputra</h6>
                             <p class="small text-muted mb-2">Front-end Engineer</p>
                             <div class="team-social d-flex justify-content-center gap-3">
-                                <a href="#"><i class="bi bi-instagram"></i></a>
-                                <a href="#"><i class="bi bi-linkedin"></i></a>
-                                <a href="#"><i class="bi bi-github"></i></a>
-                                <a href="#"><i class="bi bi-envelope"></i></a>
+                                <a href="https://www.instagram.com/irhns2/"><i class="bi bi-instagram"></i></a>
+                                <a href="https://www.linkedin.com/in/irfan-h-487146319/"><i class="bi bi-linkedin"></i></a>
+                                <a href="https://github.com/IrfanHanifs"><i class="bi bi-github"></i></a>
+                                <a href="mailto:l200230020@student.ums.ac.id"><i class="bi bi-envelope"></i></a>
                             </div>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="team-member">
-                            <img src="https://picsum.photos/seed/nanang/210/210" alt="Nanang">
+                            <img src="nanang.png" alt="Nanang">
                             <h6 class="fw-bold mb-1">Nanang Marvin Kurniawan</h6>
                             <p class="small text-muted mb-2">Back-end Engineer</p>
                             <div class="team-social d-flex justify-content-center gap-3">
-                                <a href="#"><i class="bi bi-instagram"></i></a>
-                                <a href="#"><i class="bi bi-linkedin"></i></a>
-                                <a href="#"><i class="bi bi-github"></i></a>
-                                <a href="#"><i class="bi bi-envelope"></i></a>
+                                <a href="https://www.instagram.com/vinnn_mk/"><i class="bi bi-instagram"></i></a>
+                                <a href="https://www.linkedin.com/in/nanang-marvin-kurniawan-343a762a9/"><i class="bi bi-linkedin"></i></a>
+                                <a href="https://github.com/slashMK303"><i class="bi bi-github"></i></a>
+                                <a href="mailto:l200230015@student.ums.ac.id"><i class="bi bi-envelope"></i></a>
                             </div>
                         </div>
                     </div>
@@ -640,6 +708,7 @@
                 nav_home: "Beranda",
                 nav_features: "Fitur",
                 nav_flow: "Alur",
+                nav_demo: "Demo",
                 nav_download: "Unduh",
                 hero_title: "Platform Smart City Reporting untuk Infrastruktur",
                 hero_subtitle: "Membantu masyarakat melaporkan jalan rusak, lampu mati, dan fasilitas umum lainnya langsung dari smartphone dengan tracking status real-time.",
@@ -673,6 +742,16 @@
                 flow_3_desc: "Pihak berwenang memvalidasi laporan yang masuk di dashboard.",
                 flow_4_title: "Tindak Lanjut",
                 flow_4_desc: "Petugas lapangan dikirim untuk melakukan perbaikan fasilitas.",
+                demo_title: "Demo Aplikasi",
+                demo_subtitle: "Gunakan akun berikut untuk mencoba fitur di platform kami secara langsung.",
+                demo_admin_title: "Website Admin",
+                demo_admin_desc: "Digunakan oleh instansi untuk memantau, memverifikasi, dan mengelola laporan masyarakat.",
+                demo_open_web: "Buka Dashboard",
+                demo_app_title: "Aplikasi Mobile",
+                demo_app_desc: "Unduh aplikasi dan masuk dengan salah satu akun di bawah untuk mencoba sebagai pelapor atau petugas.",
+                role_reporter: "Pelapor",
+                role_officer: "Petugas",
+                demo_download_app: "Unduh Aplikasi",
                 tech_title: "Technology Stack",
                 download_title: "Dapatkan Aplikasi Sekarang",
                 download_desc: "Laporkan masalah di sekitarmu dan pantau perkembangannya langsung dari genggaman. Tersedia untuk berbagai arsitektur perangkat Android.",
@@ -699,6 +778,7 @@
                 nav_home: "Home",
                 nav_features: "Features",
                 nav_flow: "Flow",
+                nav_demo: "Demo",
                 nav_download: "Download",
                 hero_title: "Smart City Reporting Platform for Infrastructure",
                 hero_subtitle: "Helping communities report damaged roads, broken lights, and other public facilities directly from their smartphones with real-time status tracking.",
@@ -732,6 +812,16 @@
                 flow_3_desc: "Authorities validate incoming reports on the dashboard.",
                 flow_4_title: "Follow Up",
                 flow_4_desc: "Field officers are sent to perform facility repairs.",
+                demo_title: "Application Demo",
+                demo_subtitle: "Use the following accounts to try our platform features directly.",
+                demo_admin_title: "Admin Website",
+                demo_admin_desc: "Used by agencies to monitor, verify, and manage public reports.",
+                demo_open_web: "Open Dashboard",
+                demo_app_title: "Mobile Application",
+                demo_app_desc: "Download the app and login with one of the accounts below to try as a reporter or officer.",
+                role_reporter: "Reporter",
+                role_officer: "Officer",
+                demo_download_app: "Download Application",
                 tech_title: "Technology Stack",
                 download_title: "Get the App Now",
                 download_desc: "Report problems around you and monitor their progress directly from your palm. Available for various Android device architectures.",
