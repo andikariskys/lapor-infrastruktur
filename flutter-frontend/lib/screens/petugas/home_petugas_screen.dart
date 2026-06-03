@@ -9,6 +9,7 @@ class HomePetugasScreen extends StatefulWidget {
   final String namaUser;
   final String jabatan;
   final String instansi;
+  final String? profilePhotoPath;
   final VoidCallback? onViewAllTugas;
 
   const HomePetugasScreen({
@@ -16,6 +17,7 @@ class HomePetugasScreen extends StatefulWidget {
     this.namaUser = 'Petugas',
     this.jabatan = 'Petugas Lapangan',
     this.instansi = 'Dinas Pekerjaan Umum',
+    this.profilePhotoPath,
     this.onViewAllTugas,
   });
 
@@ -59,9 +61,12 @@ class _HomePetugasScreenState extends State<HomePetugasScreen> {
             'catatan_admin': report['assignments'] != null && (report['assignments'] as List).isNotEmpty
                 ? (report['assignments'] as List).first['note'] ?? ''
                 : '',
-            'icon': Icons.add_road_rounded,
-            'iconBg': const Color(0xFFE4EFFF),
-            'iconColor': const Color(0xFF0F3E9F),
+            'feedbacks': report['feedbacks'] ?? [],
+            'completion_photo': report['completion_photo'],
+            'officer_reply': report['officer_reply'],
+            'icon': _getIconForCategory(kategoriName),
+            'iconBg': _getIconBgForCategory(kategoriName),
+            'iconColor': _getIconColorForCategory(kategoriName),
           };
         }).toList();
         _isLoading = false;
@@ -129,6 +134,51 @@ class _HomePetugasScreenState extends State<HomePetugasScreen> {
       return '${date.day} ${months[date.month]} ${date.year} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} WIB';
     } catch (_) {
       return dateStr;
+    }
+  }
+
+  IconData _getIconForCategory(String kategori) {
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return Icons.add_road_rounded;
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return Icons.power_off_rounded;
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return Icons.water_drop_outlined;
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return Icons.signpost_rounded;
+    } else {
+      return Icons.report_problem_rounded;
+    }
+  }
+
+  Color _getIconBgForCategory(String kategori) {
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFFFFDFDF);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFFE4EFFF);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFFFF0E6);
+    } else {
+      return const Color(0xFFFFF0E6);
+    }
+  }
+
+  Color _getIconColorForCategory(String kategori) {
+    final lower = kategori.toLowerCase();
+    if (lower.contains('jalan') && (lower.contains('rusak') || lower.contains('kerusakan'))) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('lampu') || lower.contains('penerangan')) {
+      return const Color(0xFF9F0F0F);
+    } else if (lower.contains('drainase') || lower.contains('selokan')) {
+      return const Color(0xFF0F3E9F);
+    } else if (lower.contains('rambu') || lower.contains('marka')) {
+      return const Color(0xFFE8720C);
+    } else {
+      return const Color(0xFFE8720C);
     }
   }
 
@@ -240,13 +290,33 @@ class _HomePetugasScreenState extends State<HomePetugasScreen> {
 
   // ── Header ──────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final String? profilePhotoPath = widget.profilePhotoPath;
+
+    Widget avatarImage;
+    if (profilePhotoPath != null && profilePhotoPath.isNotEmpty) {
+      avatarImage = CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(ApiService.getFullImageUrl(profilePhotoPath)),
+      );
+    } else {
+      avatarImage = const CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.primaryBlue,
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
+      );
+    }
+
     return Row(
       children: [
+        // Avatar
         Container(
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.primaryBlue,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -256,7 +326,7 @@ class _HomePetugasScreenState extends State<HomePetugasScreen> {
               ),
             ],
           ),
-          child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+          child: avatarImage,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -408,15 +478,49 @@ class _HomePetugasScreenState extends State<HomePetugasScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon
+            // Report Photo Thumbnail or Category Icon
             Container(
-              width: 52,
-              height: 52,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: item['iconBg'],
+                color: item['iconBg'] ?? const Color(0xFFE4EFFF),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(item['icon'], color: item['iconColor'], size: 26),
+              child: item['foto_url'] != null && item['foto_url'].toString().isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        ApiService.getFullImageUrl(item['foto_url']),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              item['icon'] ?? Icons.report_problem_rounded,
+                              color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                              size: 28,
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F3E9F)),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Icon(
+                      item['icon'] ?? Icons.report_problem_rounded,
+                      color: item['iconColor'] ?? const Color(0xFF0F3E9F),
+                      size: 28,
+                    ),
             ),
             const SizedBox(width: 14),
 
