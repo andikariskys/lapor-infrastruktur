@@ -237,6 +237,11 @@
                     <li class="nav-item"><a class="nav-link" href="#alur" data-i18n="nav_flow">Alur</a></li>
                     <li class="nav-item"><a class="nav-link" href="#demo" data-i18n="nav_demo">Demo</a></li>
                     <li class="nav-item"><a class="nav-link" href="#unduh" data-i18n="nav_download">Unduh</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://github.com/andikariskys/lapor-infrastruktur" target="_blank">
+                            <i class="bi bi-github"></i> GitHub
+                        </a>
+                    </li>
                     <li class="nav-item ms-lg-3">
                         <button class="btn-lang-toggle" onclick="toggleLang()" id="lang-toggle">
                             <i class="bi bi-translate"></i>
@@ -480,30 +485,30 @@
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                 <div>
                                     <h6 class="mb-0 fw-bold">arm64-v8a (64-bit)</h6>
-                                    <small class="text-muted">Size: 18.0 MB</small>
+                                    <small class="text-muted">Size: 18.1 MB</small>
                                 </div>
-                                <a href="https://drive.google.com/file/d/1Iw2cGH-1gq1Vx7crQvdqlsTEEqg0C_fC/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1qbW1LgznU2ugSAbUdH1j4KLVFRu74MyL/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                 <div>
                                     <h6 class="mb-0 fw-bold">armeabi-v7a (32-bit)</h6>
-                                    <small class="text-muted">Size: 15.7 MB</small>
+                                    <small class="text-muted">Size: 15.8 MB</small>
                                 </div>
-                                <a href="https://drive.google.com/file/d/1atztrFCdVlEPXzbEzIbh7UGtoSQED7Yw/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1Mml-H132SHMUFkeYlJHYGK2pLWerr_0i/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                 <div>
                                     <h6 class="mb-0 fw-bold">x86_64 (emulator Android)</h6>
-                                    <small class="text-muted">Size: 19.3 MB</small>
+                                    <small class="text-muted">Size: 19.4 MB</small>
                                 </div>
-                                <a href="https://drive.google.com/file/d/1vjKPNASkG4CNxWXlqExjqlpPyhv2xptV/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1Ma-2Lw89x11iHX_1C-DXzI31bZ9Ha4Iq/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div>
                                     <h6 class="mb-0 fw-bold">Universal APK</h6>
-                                    <small class="text-muted">Size: 50.5 MB</small>
+                                    <small class="text-muted">Size: 50.6 MB</small>
                                 </div>
-                                <a href="https://drive.google.com/file/d/11YD5XVeoped9i5f-duv_SB7end9fk_9a/view?usp=sharing" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
+                                <a href="https://drive.google.com/file/d/1YKRO3hEeJjQ9YbEks6KXBH2x_wpgWPyl/view?usp=drive_link" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" data-i18n="nav_download">Unduh</a>
                             </div>
                         </div>
                     </div>
@@ -694,6 +699,11 @@
     <footer>
         <div class="container text-center">
             <p class="mb-2"><strong>Lapor Infrastruktur</strong> - Smart City Reporting Project</p>
+            <div class="mb-3">
+                <a href="https://github.com/andikariskys/lapor-infrastruktur" target="_blank" class="text-decoration-none text-dark">
+                    <i class="bi bi-github me-1"></i> <span data-i18n="footer_github">Repository GitHub</span>
+                </a>
+            </div>
             <p class="small text-muted mb-0">&copy; 2026 Cipcupcapstone – Universitas Muhammadiyah Surakarta</p>
         </div>
     </footer>
@@ -772,7 +782,8 @@
                 faq_6_q: "Bagaimana jika saya salah mengirim laporan?",
                 faq_6_a: "Pengguna dapat membatalkan atau mengedit laporan selama status laporan tersebut masih dalam tahap \"Menunggu Verifikasi\".",
                 faq_7_q: "Apakah identitas pelapor anonim?",
-                faq_7_a: "Identitas Anda aman dalam sistem kami dan hanya digunakan oleh instansi terkait untuk proses validasi jika diperlukan."
+                faq_7_a: "Identitas Anda aman dalam sistem kami dan hanya digunakan oleh instansi terkait untuk proses validasi jika diperlukan.",
+                footer_github: "Repository GitHub"
             },
             en: {
                 nav_home: "Home",
@@ -842,7 +853,8 @@
                 faq_6_q: "What if I send the wrong report?",
                 faq_6_a: "Users can cancel or edit reports as long as the report status is still in the \"Waiting for Verification\" stage.",
                 faq_7_q: "Is the reporter's identity anonymous?",
-                faq_7_a: "Your identity is safe in our system and is only used by relevant agencies for the validation process if needed."
+                faq_7_a: "Your identity is safe in our system and is only used by relevant agencies for the validation process if needed.",
+                footer_github: "GitHub Repository"
             }
         };
 
