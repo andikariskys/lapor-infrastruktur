@@ -88,6 +88,15 @@
 
     </div>
 
+    <!-- Map Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="text-base sm:text-lg font-bold text-blue-800">Peta Sebaran Laporan</h2>
+            <p class="text-xs text-gray-500">Menampilkan lokasi laporan infrastruktur</p>
+        </div>
+        <div id="map" class="h-80 sm:h-96 w-full z-0"></div>
+    </div>
+
     <!-- Recent Reports List -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-100">
@@ -129,3 +138,27 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the map
+        // Default coordinates: Jakarta
+        var map = L.map('map').setView([-6.200000, 106.816666], 11);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add markers for each report (if coordinates are available)
+        @foreach($reports as $report)
+            @if(isset($report['latitude']) && isset($report['longitude']))
+                L.marker([{{ $report['latitude'] }}, {{ $report['longitude'] }}])
+                    .addTo(map)
+                    .bindPopup('<b>{{ $report['category']['name'] ?? 'Laporan' }}</b><br>{{ Str::limit($report['description'], 50) }}<br><a href="{{ url('/laporan/' . $report['id']) }}" class="text-blue-600 font-bold">Detail</a>');
+            @endif
+        @endforeach
+    });
+</script>
+@endpush
