@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Query
 from sqlmodel import Session, select
 from sqlalchemy import func, cast, Date
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Optional, Union
 from datetime import datetime
 import os
 import uuid
 import models
 import auth_utils
 from database import get_db, UPLOAD_DIR
+from clustering_utils import cluster_and_summarize_reports
 
 router = APIRouter(prefix="/api", tags=["Reports"])
 
@@ -60,17 +61,22 @@ async def create_report(
     db.refresh(new_report)
     return new_report
 
-@router.get("/reports", response_model=List[models.ReportRead], summary="[Admin] 1. List Semua Laporan Masuk", description="Melihat seluruh laporan warga untuk segera divalidasi.")
+@router.get("/reports", response_model=Union[List[models.ReportRead], List[models.ReportClusterRead]], summary="[Admin] 1. List Semua Laporan Masuk", description="Melihat seluruh laporan warga untuk segera divalidasi.")
 def get_all_reports(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[models.User, Depends(auth_utils.check_role([models.UserRole.admin]))],
-    status: Optional[str] = Query(None)
+    status: Optional[str] = Query(None),
+    cluster: bool = Query(False)
 ):
     statement = select(models.Report)
     if status and status.strip():
         statement = statement.where(models.Report.status == status)
     statement = statement.order_by(models.Report.created_at.desc())
     results = db.exec(statement).all()
+    
+    if cluster:
+        return cluster_and_summarize_reports(results)
+        
     return results
 
 @router.get("/reports/my", response_model=List[models.ReportRead], summary="[Pelapor] 2. List Laporan Saya", description="Warga bisa melihat riwayat laporan yang pernah mereka kirim.")

@@ -19,13 +19,13 @@ class ReportController extends Controller
     {
         $token = Session::get('api_token');
         $status = $request->query('status');
+        $cluster = $request->query('cluster');
 
-        $url = $this->apiUrl . '/reports';
-        if ($status) {
-            $url .= '?status=' . $status;
-        }
+        $params = [];
+        if ($status) $params['status'] = $status;
+        if ($cluster) $params['cluster'] = 'true';
 
-        $response = Http::withToken($token)->get($url);
+        $response = Http::withToken($token)->get($this->apiUrl . '/reports', $params);
 
         if ($response->successful()) {
             $reports = collect($response->json());
