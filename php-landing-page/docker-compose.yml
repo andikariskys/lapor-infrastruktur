@@ -1,0 +1,9 @@
+services:
+  php:
+    image: php:8.2-apache
+    container_name: php-landing-page
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+    restart: unless-stopped

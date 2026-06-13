@@ -217,6 +217,16 @@ class ReportRead(ReportBase):
 class ReportUpdateStatus(SQLModel):
     status: ReportStatus
 
+# --- Cluster Schemas ---
+
+class ReportClusterRead(SQLModel):
+    cluster_id: int
+    summary: str
+    latitude: float
+    longitude: float
+    count: int
+    reports: List[ReportRead]
+
 # --- Assignment Model ---
 
 class AssignmentBase(SQLModel):
